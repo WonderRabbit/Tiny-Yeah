@@ -1,0 +1,7 @@
+{
+  "name": "<target>-opencode",
+  "private": true,
+  "dependencies": {
+    "tiny-yeah": "file:./vendor/tiny-yeah-v${VERSION}-bundled.tgz"
+  }
+}

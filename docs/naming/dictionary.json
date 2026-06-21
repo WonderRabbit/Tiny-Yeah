@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "tool.tiny_yeah_install_check",
+      "name": "tiny_yeah_install_check",
+      "normalized": "tiny_yeah_install_check",
+      "kind": "tool",
+      "namespace": "opencode",
+      "casing": "snake_case",
+      "tokens": ["tiny", "yeah", "install", "check"],
+      "status": "active",
+      "collisionGroup": "tiny-yeah-tools",
+      "aliases": [],
+      "blockedVariants": ["tiny_chu_install_check"],
+      "sourceRefs": [
+        "src/head/opencode/plugin.ts:tiny_yeah_install_check",
+        "src/head/opencode/library-surface.ts:tiny_yeah_install_check"
+      ],
+      "meaning": "Parity diagnostic tool name (REQ-TY-020). Verifies library and plugin tool surfaces are 1:1. Reserved: the naming-check gate (REQ-TY-023 F7) requires this name be registered AND present in src/."
+    },
+    {
+      "id": "package.tiny-yeah",
+      "name": "tiny-yeah",
+      "normalized": "tiny-yeah",
+      "kind": "term",
+      "namespace": "shared",
+      "casing": "kebab-case",
+      "tokens": ["tiny", "yeah"],
+      "status": "active",
+      "collisionGroup": "tiny-yeah-packages",
+      "aliases": [],
+      "blockedVariants": ["tiny-chu"],
+      "sourceRefs": ["package.json:name"],
+      "meaning": "Root npm package id. Kebab-case per npm convention. Exports map: ./ , ./opencode, ./tui."
+    },
+    {
+      "id": "convention.tool_ids",
+      "name": "tool_id_casing",
+      "normalized": "tool_id_casing",
+      "kind": "term",
+      "namespace": "shared",
+      "casing": "snake_case",
+      "tokens": ["tool", "id", "casing"],
+      "status": "active",
+      "collisionGroup": "tiny-yeah-conventions",
+      "aliases": [],
+      "blockedVariants": [],
+      "sourceRefs": ["docs/naming/dictionary.json:convention.tool_ids"],
+      "meaning": "Convention: every tool id is snake_case with the tiny_yeah_ prefix. Tool ids appear as object keys in the composed registry and as OpenCode tool names."
+    },
+    {
+      "id": "convention.package_ids",
+      "name": "package_id_casing",
+      "normalized": "package_id_casing",
+      "kind": "term",
+      "namespace": "shared",
+      "casing": "kebab-case",
+      "tokens": ["package", "id", "casing"],
+      "status": "active",
+      "collisionGroup": "tiny-yeah-conventions",
+      "aliases": [],
+      "blockedVariants": [],
+      "sourceRefs": ["docs/naming/dictionary.json:convention.package_ids"],
+      "meaning": "Convention: package ids are kebab-case. The tiny-yeah prefix strategy replaces the donor tiny-chu prefix."
+    },
+    {
+      "id": "convention.yeah_prefix",
+      "name": "yeah_prefix_strategy",
+      "normalized": "yeah_prefix_strategy",
+      "kind": "term",
+      "namespace": "shared",
+      "casing": "snake_case",
+      "tokens": ["yeah", "prefix", "strategy"],
+      "status": "active",
+      "collisionGroup": "tiny-yeah-conventions",
+      "aliases": [],
+      "blockedVariants": ["chu_prefix_strategy"],
+      "sourceRefs": ["docs/naming/dictionary.json:convention.yeah_prefix"],
+      "meaning": "Rename strategy (plan.md §3.8, Phase 0 decision B): Tiny-Chu identifiers are renamed using the Yeah* prefix (Yeah* for PascalCase types, yeah* for camelCase, tiny_yeah_ for snake_case tool ids, tiny-yeah- for kebab-case package ids). naming-check MUST NOT flag this strategy as a violation."
+    },
+    {
+      "id": "overloaded.create",
+      "name": "create",
+      "normalized": "create",
+      "kind": "term",
+      "namespace": "shared",
+      "casing": "lowerCase",
+      "tokens": ["create"],
+      "status": "active",
+      "collisionGroup": "overloaded-stems",
+      "aliases": [],
+      "blockedVariants": [],
+      "sourceRefs": ["docs/naming/dictionary.json:overloaded.create"],
+      "meaning": "Overloaded creation verb. Pair with a domain suffix for public APIs (createTinyYeahPlugin, createTinyYeahLibrarySurface)."
+    },
+    {
+      "id": "overloaded.build",
+      "name": "build",
+      "normalized": "build",
+      "kind": "term",
+      "namespace": "shared",
+      "casing": "lowerCase",
+      "tokens": ["build"],
+      "status": "active",
+      "collisionGroup": "overloaded-stems",
+      "aliases": [],
+      "blockedVariants": [],
+      "sourceRefs": ["docs/naming/dictionary.json:overloaded.build"],
+      "meaning": "Overloaded factory verb. Pair with a domain suffix (buildTinyYeahTools, buildTaskFocusPacket, buildResumePacket)."
+    }
+  ]
+}

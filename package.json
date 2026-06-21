@@ -1,0 +1,54 @@
+{
+  "name": "tiny-yeah",
+  "version": "1.0.0",
+  "description": "Small-model-safe orchestration kernel — checkpointed composer with a strict model contract.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./opencode": {
+      "types": "./dist/head/opencode/plugin.d.ts",
+      "import": "./dist/head/opencode/plugin.js"
+    },
+    "./tui": {
+      "types": "./dist/head/opencode/tui-plugin.d.ts",
+      "import": "./dist/head/opencode/tui-plugin.js"
+    }
+  },
+  "bin": {
+    "tiny-yeah": "./bin/tiny-yeah.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "naming:check": "node scripts/naming-check.mjs",
+    "release:offline": "node scripts/release/build-offline-bundle.mjs",
+    "verify:offline": "node scripts/release/verify-offline-bundle.mjs",
+    "bin:smoke": "node bin/tiny-yeah.js --version",
+    "check": "npm run lint && npm run naming:check && npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.17.4",
+    "@opentui/solid": "^0.4.1",
+    "jsonc-parser": "^3.3.1",
+    "typescript": "^5.9.3",
+    "zod": "^4.1.13"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.7",
+    "@types/node": "^24.10.2",
+    "fast-check": "^3.23.2",
+    "vitest": "^4.1.9"
+  }
+}
