@@ -25,7 +25,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_DOCTOR_TIMEOUT_MS,
-  type DoctorMode,
   type DoctorReport,
   doctor,
   doctorReportSchema,
@@ -398,7 +397,7 @@ describe("doctor — mode full runs deeper checks (REQ-TY2-013)", () => {
       const standard = await doctor({ projectRoot: projectTmp, mode: "standard" });
       const full = await doctor({
         projectRoot: projectTmp,
-        mode: "full" as DoctorMode,
+        mode: "full",
         bundleDir,
       });
       expect(full.checks.length).toBeGreaterThan(standard.checks.length);

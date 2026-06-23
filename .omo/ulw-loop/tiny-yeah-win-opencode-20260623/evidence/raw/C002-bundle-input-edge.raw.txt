@@ -1,0 +1,15 @@
+NODE_VERSION: v26.3.0
+COMMAND: printf invalid bytes > /private/tmp/tiny-yeah-c002-bad.tar.gz
+EXIT_CODE: 0
+COMMAND: node bin/tiny-yeah.js install --project /private/tmp/tiny-yeah-raw-c002-project --bundle /private/tmp/tiny-yeah-c002-bad.tar.gz --dry-run --json
+{
+  "command": "install",
+  "ok": false,
+  "code": "BUNDLE_ARCHIVE_UNPACK_FAILED",
+  "error": "tar: Missing type keyword in mtree specification\ntar: Error exit delayed from previous errors.",
+  "recoveryHint": "Ensure `tar` is available on PATH, then pass a valid tiny-yeah-offline-v*.tar.gz archive or extract it manually and pass the extracted directory."
+}
+EXIT_CODE: 2
+
+COMMAND: test -e /private/tmp/tiny-yeah-raw-c002-project/.opencode/package.json
+EXIT_CODE: 1

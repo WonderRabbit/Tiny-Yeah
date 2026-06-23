@@ -101,6 +101,25 @@ async function tryInstallProductionDeps(stagingDir, cacheDir) {
   }
 }
 
+async function tryMaterializeProductionDepsFromRepoNodeModules(stagingDir, cacheDir) {
+  try {
+    await access(path.join(repoRoot, "node_modules"));
+    await rm(path.join(stagingDir, "node_modules"), { recursive: true, force: true });
+    await cp(path.join(repoRoot, "node_modules"), path.join(stagingDir, "node_modules"), { recursive: true });
+    await runNpm(["prune", "--omit=dev", "--cache", cacheDir, "--ignore-scripts", "--no-audit", "--fund=false"], {
+      cwd: stagingDir,
+      env: npmEnv(cacheDir),
+      maxBuffer,
+    });
+    const closure = JSON.parse(
+      (await runNpm(["ls", "--omit=dev", "--json"], { cwd: stagingDir, maxBuffer })).stdout,
+    );
+    return { materialized: true, closure, error: null, source: "repo-node_modules-prune" };
+  } catch (error) {
+    return { materialized: false, closure: null, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 async function writeBundleReadme(bundleDir, version, tarballName, airGapComplete) {
   const status = airGapComplete
     ? "This bundle is self-contained: production dependency tarballs are vendored and `npm install --offline` works without registry access."
@@ -220,7 +239,10 @@ async function main() {
       dependencies: packageJson.dependencies,
     };
 
-    const depResult = await tryInstallProductionDeps(stagingDir, cacheDir);
+    const installDepResult = await tryInstallProductionDeps(stagingDir, cacheDir);
+    const depResult = installDepResult.materialized
+      ? { ...installDepResult, source: "staging-npm-install" }
+      : await tryMaterializeProductionDepsFromRepoNodeModules(stagingDir, cacheDir);
     const airGapComplete = depResult.materialized;
     if (airGapComplete) {
       releasePackageJson.bundleDependencies = true;
@@ -281,8 +303,12 @@ async function main() {
       npm: (await runNpm(["--version"], { cwd: repoRoot, maxBuffer })).stdout.trim(),
       packageTarball: `vendor/${tarballName}`,
       dependencyStrategy: airGapComplete
-        ? { bundleDependencies: true, materializedFrom: "staging-npm-install", omit: "dev" }
-        : { projectOnlyPack: true, materializedFrom: "none", note: depResult.error },
+        ? { bundleDependencies: true, materializedFrom: depResult.source, omit: "dev" }
+        : {
+            projectOnlyPack: true,
+            materializedFrom: "none",
+            note: `${installDepResult.error}; fallback: ${depResult.error}`,
+          },
       airGapComplete,
       dependencyClosure: depResult.closure,
       distHashes,

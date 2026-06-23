@@ -218,6 +218,12 @@ function resolvePluginCachePath(): string {
   return path.join(cacheRoot, "opencode", "packages");
 }
 
+function resolveNpmCachePath(projectRoot: string): string {
+  const explicit = process.env.TINY_YEAH_NPM_CACHE;
+  if (explicit !== undefined && explicit.length > 0) return path.resolve(explicit);
+  return path.join(projectRoot, ".opencode", ".tiny-yeah-npm-cache");
+}
+
 /** Best-effort `opencode --version`. Returns "unknown" if the command is unavailable. */
 async function detectOpenCodeVersion(): Promise<string> {
   try {
@@ -471,12 +477,30 @@ export async function install(options: InstallOptions): Promise<InstallResult> {
  */
 async function runNpmInstallOffline(projectRoot: string): Promise<void> {
   const cwd = path.join(projectRoot, ".opencode");
+  const npmCachePath = resolveNpmCachePath(projectRoot);
+  await mkdir(npmCachePath, { recursive: true });
   try {
     await execFileAsync(
       "npm",
-      ["install", "--offline", "--ignore-scripts", "--no-audit", "--fund=false"],
+      [
+        "install",
+        "--offline",
+        "--cache",
+        npmCachePath,
+        "--legacy-peer-deps",
+        "--ignore-scripts",
+        "--no-audit",
+        "--fund=false",
+      ],
       {
         cwd,
+        env: {
+          ...process.env,
+          npm_config_cache: npmCachePath,
+          npm_config_legacy_peer_deps: "true",
+          npm_config_audit: "false",
+          npm_config_fund: "false",
+        },
         timeout: 120_000,
         // npm emits voluminous tar warnings (TAR_ENTRY_INVALID for vendored bundles). The
         // default 1MB maxBuffer overflows on those — bump to 32MB so the install completes

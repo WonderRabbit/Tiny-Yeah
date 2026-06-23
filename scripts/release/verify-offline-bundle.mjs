@@ -99,6 +99,72 @@ console.log(JSON.stringify({
   return JSON.parse(result.stdout.trim());
 }
 
+async function installConsumerForSmoke(consumerRoot, manifest, tempRoot) {
+  if (manifest.airGapComplete) {
+    const emptyCache = path.join(tempRoot, "empty-npm-cache");
+    await mkdir(emptyCache, { recursive: true });
+    try {
+      await runNpm(
+        [
+          "install",
+          "--offline",
+          "--cache",
+          emptyCache,
+          "--legacy-peer-deps",
+          "--ignore-scripts",
+          "--no-audit",
+          "--fund=false",
+        ],
+        {
+          cwd: consumerRoot,
+          env: {
+            ...process.env,
+            npm_config_registry: "http://127.0.0.1:9/",
+            npm_config_legacy_peer_deps: "true",
+            npm_config_audit: "false",
+            npm_config_fund: "false",
+          },
+          maxBuffer,
+        },
+      );
+      return { ok: true, mode: "offline", offlineInstallOk: true };
+    } catch (error) {
+      return {
+        ok: false,
+        mode: "offline",
+        offlineInstallOk: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  const cacheDir = path.join(tempRoot, "online-npm-cache");
+  await mkdir(cacheDir, { recursive: true });
+  try {
+    await runNpm(
+      ["install", "--cache", cacheDir, "--legacy-peer-deps", "--ignore-scripts", "--no-audit", "--fund=false"],
+      {
+        cwd: consumerRoot,
+        env: {
+          ...process.env,
+          npm_config_legacy_peer_deps: "true",
+          npm_config_audit: "false",
+          npm_config_fund: "false",
+        },
+        maxBuffer,
+      },
+    );
+    return { ok: true, mode: "online", offlineInstallOk: null };
+  } catch (error) {
+    return {
+      ok: false,
+      mode: "online",
+      offlineInstallOk: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 /**
  * SPEC-TINY-YEAH-002 Phase 0: verify the bundle is self-installing.
  *
@@ -201,31 +267,15 @@ async function main() {
 
     const consumer = await prepareConsumer(bundleDir, tempRoot, manifest);
 
-    let offlineInstallOk = null;
-    if (manifest.airGapComplete) {
-      // Attempt air-gapped install against a dummy registry (no network).
-      const emptyCache = path.join(tempRoot, "empty-npm-cache");
-      await mkdir(emptyCache, { recursive: true });
-      try {
-        await runNpm(
-          ["install", "--offline", "--cache", emptyCache, "--ignore-scripts", "--no-audit", "--fund=false"],
-          {
-            cwd: consumer.consumerRoot,
-            env: {
-              ...process.env,
-              npm_config_registry: "http://127.0.0.1:9/",
-              npm_config_audit: "false",
-              npm_config_fund: "false",
-            },
-            maxBuffer,
-          },
-        );
-        offlineInstallOk = true;
-      } catch {
-        offlineInstallOk = false;
-      }
+    const installResult = await installConsumerForSmoke(consumer.consumerRoot, manifest, tempRoot);
+    report.installMode = installResult.mode;
+    report.offlineInstallOk = installResult.offlineInstallOk;
+
+    if (!installResult.ok) {
+      console.error(JSON.stringify({ ...report, exitReason: installResult.error }, null, 2));
+      process.exitCode = 1;
+      return;
     }
-    report.offlineInstallOk = offlineInstallOk;
 
     // Verify the bundled dist/ imports structurally. This is the part that MUST pass regardless
     // of air-gap status — it proves the project tarball's exports resolve.
@@ -234,11 +284,6 @@ async function main() {
     // Honest exit policy: if airGapComplete is true but offline install failed, exit non-zero
     // (the bundle claimed completeness it could not deliver). If airGapComplete is false, the
     // smoke import is the gate — we do NOT fail on the absent offline install (documented gap).
-    if (manifest.airGapComplete && offlineInstallOk === false) {
-      console.error(JSON.stringify({ ...report, exitReason: "air-gapped install failed despite airGapComplete=true" }, null, 2));
-      process.exitCode = 1;
-      return;
-    }
     console.log(JSON.stringify(report, null, 2));
   } finally {
     if (!args.keepTemp) await rm(tempRoot, { recursive: true, force: true });

@@ -1,0 +1,29 @@
+C002 edge path: bundle archive inputs are handled before project writes.
+
+Raw transcript:
+- .omo/ulw-loop/tiny-yeah-win-opencode-20260623/evidence/raw/C002-bundle-input-edge.raw.txt
+
+Valid archive behavior:
+- Covered by `tests/unit/installer/bin-install.test.ts`.
+- Test: `install --dry-run accepts a release tarball path as --bundle`.
+- Result in targeted run: 2 test files passed, 6 tests passed.
+
+Malformed or missing archive behavior:
+Command:
+`node bin/tiny-yeah.js install --project /private/tmp/tiny-yeah-c002-project --bundle /private/tmp/tiny-yeah-c002-bad.tar.gz --dry-run --json`
+
+Result:
+- exit code: 2
+- command: install
+- ok: false
+- code: BUNDLE_ARCHIVE_UNPACK_FAILED
+- recoveryHint: Ensure `tar` is available on PATH, then pass a valid tiny-yeah-offline-v*.tar.gz archive or extract it manually and pass the extracted directory.
+
+Project-write safety:
+- The archive is unpacked before lifecycle import and before install plan writes.
+- On archive unpack failure, install exits with code 2 and does not enter the write path.
+
+Doctor archive behavior:
+- Covered by `tests/unit/installer/doctor.test.ts`.
+- Test: `mode:full verifies SHA256SUMS when bundleDir is a release archive path`.
+- Result in targeted run: 3 test files passed, 22 tests passed.

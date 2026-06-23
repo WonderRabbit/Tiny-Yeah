@@ -23,6 +23,14 @@
   "bin": {
     "tiny-yeah": "./bin/tiny-yeah.js"
   },
+  "files": [
+    "dist/",
+    "bin/",
+    "templates/",
+    "install-offline.ps1",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",

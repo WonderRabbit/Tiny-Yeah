@@ -1,0 +1,1240 @@
+NODE_VERSION: v26.3.0
+NPM_VERSION: 11.16.0
+COMMAND: npm_config_cache=/private/tmp/tiny-yeah-pack-cache npm pack --dry-run --json
+[
+  {
+    "id": "tiny-yeah@1.0.0",
+    "name": "tiny-yeah",
+    "version": "1.0.0",
+    "size": 167029,
+    "unpackedSize": 683846,
+    "shasum": "7f2f445a412872f279311c4f16ef520be9c90d24",
+    "integrity": "sha512-VjL3lMs3zOB6RzIKMgeAgQFK/cv5ODzoPk4GjO4JzPshAeu29oEif5gEdvZmEYpJ8jP91YGSn2ZVUViVNsG/ZQ==",
+    "filename": "tiny-yeah-1.0.0.tgz",
+    "files": [
+      {
+        "path": "LICENSE",
+        "size": 11357,
+        "mode": 420
+      },
+      {
+        "path": "README.md",
+        "size": 2189,
+        "mode": 420
+      },
+      {
+        "path": "bin/tiny-yeah.js",
+        "size": 28060,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/apply.d.ts",
+        "size": 227,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/apply.d.ts.map",
+        "size": 308,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/apply.js",
+        "size": 9413,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/apply.js.map",
+        "size": 5949,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/atomic-write.d.ts",
+        "size": 684,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/atomic-write.d.ts.map",
+        "size": 821,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/atomic-write.js",
+        "size": 5201,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/atomic-write.js.map",
+        "size": 3939,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/contracts.d.ts",
+        "size": 2261,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/contracts.d.ts.map",
+        "size": 820,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/contracts.js",
+        "size": 2482,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/contracts.js.map",
+        "size": 2271,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/errors.d.ts",
+        "size": 859,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/errors.d.ts.map",
+        "size": 802,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/errors.js",
+        "size": 1047,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/errors.js.map",
+        "size": 862,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/hashing.d.ts",
+        "size": 170,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/hashing.d.ts.map",
+        "size": 238,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/hashing.js",
+        "size": 2158,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/hashing.js.map",
+        "size": 1515,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/preview.d.ts",
+        "size": 429,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/preview.d.ts.map",
+        "size": 476,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/preview.js",
+        "size": 4631,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/preview.js.map",
+        "size": 3434,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/universal-write-path.d.ts",
+        "size": 914,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/universal-write-path.d.ts.map",
+        "size": 957,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/universal-write-path.js",
+        "size": 1654,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/checkpoint/universal-write-path.js.map",
+        "size": 1109,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/composer.d.ts",
+        "size": 248,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/composer.d.ts.map",
+        "size": 263,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/composer.js",
+        "size": 3657,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/composer.js.map",
+        "size": 2848,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/default-packages.d.ts",
+        "size": 464,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/default-packages.d.ts.map",
+        "size": 256,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/default-packages.js",
+        "size": 3026,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/default-packages.js.map",
+        "size": 1625,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/errors.d.ts",
+        "size": 473,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/errors.d.ts.map",
+        "size": 482,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/errors.js",
+        "size": 612,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/errors.js.map",
+        "size": 441,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/index.d.ts",
+        "size": 740,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/index.d.ts.map",
+        "size": 554,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/index.js",
+        "size": 342,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/index.js.map",
+        "size": 309,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/order.d.ts",
+        "size": 364,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/order.d.ts.map",
+        "size": 376,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/order.js",
+        "size": 3415,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/order.js.map",
+        "size": 3543,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/types.d.ts",
+        "size": 4335,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/types.d.ts.map",
+        "size": 3760,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/types.js",
+        "size": 537,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/composer/types.js.map",
+        "size": 198,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/index.d.ts",
+        "size": 560,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/index.d.ts.map",
+        "size": 503,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/index.js",
+        "size": 329,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/index.js.map",
+        "size": 297,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/runtime-matcher.d.ts",
+        "size": 1208,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/runtime-matcher.d.ts.map",
+        "size": 1308,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/runtime-matcher.js",
+        "size": 3658,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/runtime-matcher.js.map",
+        "size": 3476,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/sanitizer.d.ts",
+        "size": 638,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/sanitizer.d.ts.map",
+        "size": 688,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/sanitizer.js",
+        "size": 2085,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/sanitizer.js.map",
+        "size": 1807,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/source-graph.d.ts",
+        "size": 1019,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/source-graph.d.ts.map",
+        "size": 967,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/source-graph.js",
+        "size": 4924,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/evidence/source-graph.js.map",
+        "size": 4279,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/analyze.d.ts",
+        "size": 2198,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/analyze.d.ts.map",
+        "size": 501,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/analyze.js",
+        "size": 9150,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/analyze.js.map",
+        "size": 9197,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/draft.d.ts",
+        "size": 146,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/draft.d.ts.map",
+        "size": 227,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/draft.js",
+        "size": 2150,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/draft.js.map",
+        "size": 1985,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/index.d.ts",
+        "size": 661,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/index.d.ts.map",
+        "size": 588,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/index.js",
+        "size": 888,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/index.js.map",
+        "size": 504,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/plan.d.ts",
+        "size": 581,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/plan.d.ts.map",
+        "size": 400,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/plan.js",
+        "size": 1577,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/plan.js.map",
+        "size": 913,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/render-wireframe.d.ts",
+        "size": 766,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/render-wireframe.d.ts.map",
+        "size": 699,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/render-wireframe.js",
+        "size": 7201,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/render-wireframe.js.map",
+        "size": 4336,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/driver.d.ts",
+        "size": 2807,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/driver.d.ts.map",
+        "size": 1131,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/driver.js",
+        "size": 2810,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/driver.js.map",
+        "size": 1451,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/index.d.ts",
+        "size": 822,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/index.d.ts.map",
+        "size": 858,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/index.js",
+        "size": 2001,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/index.js.map",
+        "size": 1270,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/playwright-driver.d.ts",
+        "size": 279,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/playwright-driver.d.ts.map",
+        "size": 341,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/playwright-driver.js",
+        "size": 3140,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/pipeline/validate/playwright-driver.js.map",
+        "size": 1936,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/index.d.ts",
+        "size": 485,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/index.d.ts.map",
+        "size": 449,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/index.js",
+        "size": 453,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/index.js.map",
+        "size": 360,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/registry.d.ts",
+        "size": 4716,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/registry.d.ts.map",
+        "size": 955,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/registry.js",
+        "size": 3248,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/registry.js.map",
+        "size": 2426,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/ui-ir.d.ts",
+        "size": 3014,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/ui-ir.d.ts.map",
+        "size": 517,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/ui-ir.js",
+        "size": 2466,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/schema/ui-ir.js.map",
+        "size": 3115,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/file-store.d.ts",
+        "size": 1400,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/file-store.d.ts.map",
+        "size": 1463,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/file-store.js",
+        "size": 5374,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/file-store.js.map",
+        "size": 5066,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/lock-store.d.ts",
+        "size": 1445,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/lock-store.d.ts.map",
+        "size": 1358,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/lock-store.js",
+        "size": 11918,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/lock-store.js.map",
+        "size": 11168,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/path-safety.d.ts",
+        "size": 431,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/path-safety.d.ts.map",
+        "size": 470,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/path-safety.js",
+        "size": 2626,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/path-safety.js.map",
+        "size": 2051,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/paths.d.ts",
+        "size": 505,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/paths.d.ts.map",
+        "size": 594,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/paths.js",
+        "size": 1416,
+        "mode": 420
+      },
+      {
+        "path": "dist/core/state/paths.js.map",
+        "size": 1059,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/bundle-reader.d.ts",
+        "size": 2569,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/bundle-reader.d.ts.map",
+        "size": 997,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/bundle-reader.js",
+        "size": 9296,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/bundle-reader.js.map",
+        "size": 5873,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/doctor.d.ts",
+        "size": 4361,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/doctor.d.ts.map",
+        "size": 1645,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/doctor.js",
+        "size": 32803,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/doctor.js.map",
+        "size": 22782,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/errors.d.ts",
+        "size": 1521,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/errors.d.ts.map",
+        "size": 899,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/errors.js",
+        "size": 1588,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/errors.js.map",
+        "size": 821,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/index.d.ts",
+        "size": 2210,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/index.d.ts.map",
+        "size": 1577,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/index.js",
+        "size": 3889,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/index.js.map",
+        "size": 1464,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/lifecycle.d.ts",
+        "size": 7249,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/lifecycle.d.ts.map",
+        "size": 2909,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/lifecycle.js",
+        "size": 38646,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/lifecycle.js.map",
+        "size": 22689,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/lock.d.ts",
+        "size": 2156,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/lock.d.ts.map",
+        "size": 664,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/lock.js",
+        "size": 8453,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/lock.js.map",
+        "size": 4722,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/opencode-config.d.ts",
+        "size": 5131,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/opencode-config.d.ts.map",
+        "size": 1448,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/opencode-config.js",
+        "size": 12743,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/opencode-config.js.map",
+        "size": 7482,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/plan.d.ts",
+        "size": 2080,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/plan.d.ts.map",
+        "size": 1210,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/plan.js",
+        "size": 7189,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/plan.js.map",
+        "size": 4425,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/semver.d.ts",
+        "size": 1404,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/semver.d.ts.map",
+        "size": 615,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/semver.js",
+        "size": 5261,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/semver.js.map",
+        "size": 3752,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/stamp.d.ts",
+        "size": 2484,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/stamp.d.ts.map",
+        "size": 793,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/stamp.js",
+        "size": 7824,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/stamp.js.map",
+        "size": 4208,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/writer.d.ts",
+        "size": 3337,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/writer.d.ts.map",
+        "size": 981,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/writer.js",
+        "size": 10580,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/installer/writer.js.map",
+        "size": 4934,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/focus-packet.d.ts",
+        "size": 1572,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/focus-packet.d.ts.map",
+        "size": 821,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/focus-packet.js",
+        "size": 2653,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/focus-packet.js.map",
+        "size": 1538,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/index.d.ts",
+        "size": 735,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/index.d.ts.map",
+        "size": 581,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/index.js",
+        "size": 1271,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/index.js.map",
+        "size": 533,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/resume.d.ts",
+        "size": 833,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/resume.d.ts.map",
+        "size": 602,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/resume.js",
+        "size": 4044,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/library/resume.js.map",
+        "size": 3316,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/budget-output.d.ts",
+        "size": 570,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/budget-output.d.ts.map",
+        "size": 622,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/budget-output.js",
+        "size": 3156,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/budget-output.js.map",
+        "size": 2735,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/index.d.ts",
+        "size": 546,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/index.d.ts.map",
+        "size": 485,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/index.js",
+        "size": 662,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/index.js.map",
+        "size": 387,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/library-surface.d.ts",
+        "size": 986,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/library-surface.d.ts.map",
+        "size": 549,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/library-surface.js",
+        "size": 3150,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/library-surface.js.map",
+        "size": 1999,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/plugin.d.ts",
+        "size": 1041,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/plugin.d.ts.map",
+        "size": 604,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/plugin.js",
+        "size": 5803,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/plugin.js.map",
+        "size": 3626,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/tiny-tool.d.ts",
+        "size": 995,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/tiny-tool.d.ts.map",
+        "size": 821,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/tiny-tool.js",
+        "size": 3425,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/tiny-tool.js.map",
+        "size": 2173,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/tui-plugin.d.ts",
+        "size": 1319,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/tui-plugin.d.ts.map",
+        "size": 709,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/tui-plugin.js",
+        "size": 3657,
+        "mode": 420
+      },
+      {
+        "path": "dist/head/opencode/tui-plugin.js.map",
+        "size": 1763,
+        "mode": 420
+      },
+      {
+        "path": "dist/index.d.ts",
+        "size": 6650,
+        "mode": 420
+      },
+      {
+        "path": "dist/index.d.ts.map",
+        "size": 4414,
+        "mode": 420
+      },
+      {
+        "path": "dist/index.js",
+        "size": 6822,
+        "mode": 420
+      },
+      {
+        "path": "dist/index.js.map",
+        "size": 3265,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/approval.d.ts",
+        "size": 1180,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/approval.d.ts.map",
+        "size": 822,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/approval.js",
+        "size": 2856,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/approval.js.map",
+        "size": 1440,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/boundary.d.ts",
+        "size": 226,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/boundary.d.ts.map",
+        "size": 305,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/boundary.js",
+        "size": 7405,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/boundary.js.map",
+        "size": 4344,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/budgets.d.ts",
+        "size": 945,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/budgets.d.ts.map",
+        "size": 459,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/budgets.js",
+        "size": 1212,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/budgets.js.map",
+        "size": 597,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/errors.d.ts",
+        "size": 720,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/errors.d.ts.map",
+        "size": 633,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/errors.js",
+        "size": 938,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/errors.js.map",
+        "size": 646,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/index.d.ts",
+        "size": 732,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/index.d.ts.map",
+        "size": 633,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/index.js",
+        "size": 783,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/index.js.map",
+        "size": 470,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/intents.d.ts",
+        "size": 2851,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/intents.d.ts.map",
+        "size": 830,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/intents.js",
+        "size": 2734,
+        "mode": 420
+      },
+      {
+        "path": "dist/model-contract/intents.js.map",
+        "size": 1649,
+        "mode": 420
+      },
+      {
+        "path": "install-offline.ps1",
+        "size": 2735,
+        "mode": 420
+      },
+      {
+        "path": "package.json",
+        "size": 1686,
+        "mode": 420
+      },
+      {
+        "path": "templates/opencode/package.json",
+        "size": 145,
+        "mode": 420
+      },
+      {
+        "path": "templates/opencode/plugins/tiny-yeah.ts",
+        "size": 817,
+        "mode": 420
+      },
+      {
+        "path": "templates/opencode/tui.json",
+        "size": 43,
+        "mode": 420
+      }
+    ],
+    "entryCount": 244,
+    "bundled": []
+  }
+]
+EXIT_CODE: 0

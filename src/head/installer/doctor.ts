@@ -665,7 +665,10 @@ async function checkBundleSha256sums(
       detail: "mode:full but no --bundle provided; skipping bundle SHA256SUMS recompute.",
     };
   }
-  const sumsPath = path.join(bundleDir, "SHA256SUMS");
+  const archiveInput = bundleDir.endsWith(".tar.gz") || bundleDir.endsWith(".tgz");
+  const sumsBaseDir = archiveInput ? path.dirname(bundleDir) : bundleDir;
+  const sumsPath = path.join(sumsBaseDir, "SHA256SUMS");
+  const expectedArchiveName = archiveInput ? path.basename(bundleDir) : undefined;
   let raw: string;
   try {
     raw = await readFile(sumsPath, "utf8");
@@ -689,27 +692,41 @@ async function checkBundleSha256sums(
   }
   const lines = raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const mismatches: string[] = [];
+  let checked = 0;
   for (const line of lines) {
     // Format: "<sha256>  <path>"
     const match = /^([0-9a-f]{64})\s+\*?(.+)$/.exec(line);
     if (match?.[1] === undefined || match[2] === undefined) continue;
     const expected = match[1];
     const relPath = match[2].trim();
-    const abs = path.join(bundleDir, relPath);
+    if (expectedArchiveName !== undefined && path.basename(relPath) !== expectedArchiveName)
+      continue;
+    const abs = path.join(sumsBaseDir, relPath);
     try {
       const content = await readFile(abs);
       const actual = createHash("sha256").update(content).digest("hex");
       if (actual !== expected) mismatches.push(`${relPath}`);
+      checked += 1;
     } catch {
       mismatches.push(`${relPath} (missing)`);
+      checked += 1;
     }
+  }
+  if (expectedArchiveName !== undefined && checked === 0) {
+    return {
+      id: "bundle-sha256sums-full",
+      category: "bundle-integrity",
+      status: "fail",
+      detail: `No SHA256SUMS entry found for ${expectedArchiveName}.`,
+      recoveryHint: "Rebuild the offline bundle so SHA256SUMS is written beside the archive.",
+    };
   }
   if (mismatches.length === 0) {
     return {
       id: "bundle-sha256sums-full",
       category: "bundle-integrity",
       status: "pass",
-      detail: `All ${lines.length} SHA256SUMS entries verified against ${bundleDir}.`,
+      detail: `All ${checked} SHA256SUMS entries verified against ${bundleDir}.`,
     };
   }
   return {

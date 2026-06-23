@@ -1,0 +1,32 @@
+NODE_VERSION: v26.3.0
+NPM_VERSION: 11.16.0
+COMMAND: npm_config_cache=/private/tmp/tiny-yeah-verify-cache npm run verify:offline -- --bundle release/tiny-yeah-offline-v1.0.0.tar.gz
+
+> tiny-yeah@1.0.0 verify:offline
+> node scripts/release/verify-offline-bundle.mjs --bundle release/tiny-yeah-offline-v1.0.0.tar.gz
+
+{
+  "bundle": "/Users/oneyoon/Workspace/Personal/Tiny-Yeah/release/tiny-yeah-offline-v1.0.0.tar.gz",
+  "version": "1.0.0",
+  "airGapComplete": true,
+  "dependencyStrategy": {
+    "bundleDependencies": true,
+    "materializedFrom": "repo-node_modules-prune",
+    "omit": "dev"
+  },
+  "installer": {
+    "entriesPresent": 5,
+    "binVersion": "1.0.0"
+  },
+  "installMode": "offline",
+  "offlineInstallOk": true,
+  "smoke": {
+    "version": "1.0.0",
+    "toolCount": 3,
+    "hasInstallCheck": true,
+    "hasPlugin": true,
+    "hasTui": true,
+    "tuiId": "tiny-yeah.dashboard"
+  }
+}
+EXIT_CODE: 0

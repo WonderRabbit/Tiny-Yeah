@@ -26,7 +26,9 @@
 // Exit codes (strategy §5): 0 success, 1 other, 2 argument error / not-implemented,
 // 3 bundle verification failure, 4 already installed, 5 write contention.
 
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -47,7 +49,7 @@ Commands:
 
 Global options:
   --project <path>        Target project root (default: current working directory)
-  --bundle <path>         Offline bundle directory or archive (default: adjacent to this bin)
+  --bundle <path>         Offline bundle directory or .tar.gz/.tgz archive (default: adjacent to this bin)
   --force                 Force overwrite / bypass version guards
   --dry-run               Print the planned changes without writing any file
   --json                  Emit machine-readable JSON output
@@ -209,6 +211,83 @@ function resolveBundleDir(explicit) {
   }
 }
 
+function makeCliError(code, message, recoveryHint) {
+  const error = new Error(message);
+  error.code = code;
+  error.recoveryHint = recoveryHint;
+  return error;
+}
+
+function emitCommandError(command, json, error) {
+  const code = error instanceof Error && "code" in error ? error.code : undefined;
+  const message = error instanceof Error ? error.message : String(error);
+  const hint = error instanceof Error && "recoveryHint" in error ? error.recoveryHint : undefined;
+  if (json) {
+    stdout(`${JSON.stringify({ command, ok: false, code, error: message, recoveryHint: hint }, null, 2)}\n`);
+  } else {
+    stderror(`tiny-yeah ${command} failed: ${message}\n`);
+    if (hint) stderror(`hint: ${hint}\n`);
+  }
+}
+
+function isBundleArchivePath(bundlePath) {
+  const lower = bundlePath.toLowerCase();
+  return lower.endsWith(".tar.gz") || lower.endsWith(".tgz");
+}
+
+function hasBundleManifest(candidate) {
+  try {
+    readFileSync(path.join(candidate, "manifest.json"), "utf8");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function findExtractedBundleDir(tempRoot) {
+  if (hasBundleManifest(tempRoot)) return tempRoot;
+  const matches = [];
+  for (const entry of readdirSync(tempRoot)) {
+    const candidate = path.join(tempRoot, entry);
+    if (statSync(candidate).isDirectory() && hasBundleManifest(candidate)) {
+      matches.push(candidate);
+    }
+  }
+  if (matches.length === 1) return matches[0];
+  throw makeCliError(
+    "BUNDLE_ARCHIVE_LAYOUT_INVALID",
+    `bundle archive must contain exactly one directory with manifest.json, found ${matches.length}`,
+    "Rebuild the offline bundle with `npm run release:offline`, then pass the generated tiny-yeah-offline-v*.tar.gz archive.",
+  );
+}
+
+function prepareBundleDir(explicit) {
+  const resolved = resolveBundleDir(explicit);
+  if (resolved === undefined) return { bundleDir: undefined, cleanup: undefined };
+  if (!explicit || !isBundleArchivePath(resolved)) return { bundleDir: resolved, cleanup: undefined };
+
+  const tempRoot = mkdtempSync(path.join(os.tmpdir(), "tiny-yeah-bundle-"));
+  try {
+    execFileSync("tar", ["-xzf", resolved, "-C", tempRoot], {
+      maxBuffer: 1024 * 1024 * 32,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return {
+      bundleDir: findExtractedBundleDir(tempRoot),
+      cleanup: () => rmSync(tempRoot, { recursive: true, force: true }),
+    };
+  } catch (error) {
+    rmSync(tempRoot, { recursive: true, force: true });
+    if (error instanceof Error && "code" in error && typeof error.code === "string") throw error;
+    const stderr = typeof error === "object" && error !== null && "stderr" in error ? String(error.stderr) : "";
+    throw makeCliError(
+      "BUNDLE_ARCHIVE_UNPACK_FAILED",
+      stderr.trim() || `failed to extract bundle archive: ${resolved}`,
+      "Ensure `tar` is available on PATH, then pass a valid tiny-yeah-offline-v*.tar.gz archive or extract it manually and pass the extracted directory.",
+    );
+  }
+}
+
 /**
  * Dynamically import the installer lifecycle. Resolution order:
  *   1. <bundleDir>/node_modules/tiny-yeah/dist/head/installer/lifecycle.js — when the bundle
@@ -276,7 +355,14 @@ function exitCodeForError(code) {
 /** Run the install subcommand. Returns the exit code; never throws. */
 async function runInstall(parsed) {
   const projectRoot = parsed.flags.project ? path.resolve(parsed.flags.project) : process.cwd();
-  const bundleDir = resolveBundleDir(parsed.flags.bundle);
+  let preparedBundle;
+  try {
+    preparedBundle = prepareBundleDir(parsed.flags.bundle);
+  } catch (error) {
+    emitCommandError("install", parsed.flags.json, error);
+    return 2;
+  }
+  const bundleDir = preparedBundle.bundleDir;
   if (bundleDir === undefined) {
     stderror(
       "tiny-yeah install: could not locate the offline bundle. Pass --bundle <path> or run from the unpacked bundle directory.\n",
@@ -284,15 +370,15 @@ async function runInstall(parsed) {
     return 2;
   }
 
-  const lifecycle = await importLifecycle(bundleDir, projectRoot);
-  if (lifecycle === undefined || typeof lifecycle.install !== "function") {
-    stderror(
-      `tiny-yeah install: installer lifecycle not found. Looked in the bundle (${bundleDir}), the project's .opencode/node_modules, and the repo dist/. Run 'npm install --offline' in .opencode/ first.\n`,
-    );
-    return 1;
-  }
-
   try {
+    const lifecycle = await importLifecycle(bundleDir, projectRoot);
+    if (lifecycle === undefined || typeof lifecycle.install !== "function") {
+      stderror(
+        `tiny-yeah install: installer lifecycle not found. Looked in the bundle (${bundleDir}), the project's .opencode/node_modules, and the repo dist/. Run 'npm install --offline' in .opencode/ first.\n`,
+      );
+      return 1;
+    }
+
     const result = await lifecycle.install({
       bundleDir,
       projectRoot,
@@ -328,6 +414,8 @@ async function runInstall(parsed) {
       if (hint) stderror(`hint: ${hint}\n`);
     }
     return exitCodeForError(code);
+  } finally {
+    if (preparedBundle.cleanup) preparedBundle.cleanup();
   }
 }
 
@@ -345,7 +433,14 @@ function formatInstallHuman(result, dryRun) {
 /** Run the update subcommand. Returns the exit code; never throws. */
 async function runUpdate(parsed) {
   const projectRoot = parsed.flags.project ? path.resolve(parsed.flags.project) : process.cwd();
-  const bundleDir = resolveBundleDir(parsed.flags.bundle);
+  let preparedBundle;
+  try {
+    preparedBundle = prepareBundleDir(parsed.flags.bundle);
+  } catch (error) {
+    emitCommandError("update", parsed.flags.json, error);
+    return 2;
+  }
+  const bundleDir = preparedBundle.bundleDir;
   if (bundleDir === undefined) {
     stderror(
       "tiny-yeah update: could not locate the offline bundle. Pass --bundle <path> or run from the unpacked bundle directory.\n",
@@ -353,15 +448,15 @@ async function runUpdate(parsed) {
     return 2;
   }
 
-  const lifecycle = await importLifecycle(bundleDir, projectRoot);
-  if (lifecycle === undefined || typeof lifecycle.update !== "function") {
-    stderror(
-      `tiny-yeah update: installer lifecycle not found. Looked in the bundle (${bundleDir}), the project's .opencode/node_modules, and the repo dist/. Run 'npm install --offline' in .opencode/ first.\n`,
-    );
-    return 1;
-  }
-
   try {
+    const lifecycle = await importLifecycle(bundleDir, projectRoot);
+    if (lifecycle === undefined || typeof lifecycle.update !== "function") {
+      stderror(
+        `tiny-yeah update: installer lifecycle not found. Looked in the bundle (${bundleDir}), the project's .opencode/node_modules, and the repo dist/. Run 'npm install --offline' in .opencode/ first.\n`,
+      );
+      return 1;
+    }
+
     const result = await lifecycle.update({
       bundleDir,
       projectRoot,
@@ -394,6 +489,8 @@ async function runUpdate(parsed) {
       if (hint) stderror(`hint: ${hint}\n`);
     }
     return exitCodeForError(code);
+  } finally {
+    if (preparedBundle.cleanup) preparedBundle.cleanup();
   }
 }
 

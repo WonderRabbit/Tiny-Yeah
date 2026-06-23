@@ -1,0 +1,121 @@
+NODE_VERSION: v26.3.0
+NPM_VERSION: 11.16.0
+COMMAND: node bin/tiny-yeah.js install --project /private/tmp/tiny-yeah-raw-c001-project --bundle release/tiny-yeah-offline-v1.0.0.tar.gz --yes --json
+{
+  "command": "install",
+  "kind": "installed",
+  "version": "1.0.0",
+  "managedPaths": [
+    ".opencode/vendor/tiny-yeah-v1.0.0-bundled.tgz",
+    ".opencode/package.json",
+    ".opencode/plugins/tiny-yeah.ts",
+    ".opencode/tui.json",
+    ".opencode/opencode.json"
+  ],
+  "stampPath": "/private/tmp/tiny-yeah-raw-c001-project/.opencode/.tiny-yeah-install.json"
+}
+EXIT_CODE: 0
+
+COMMAND: node bin/tiny-yeah.js doctor --project /private/tmp/tiny-yeah-raw-c001-project --bundle release/tiny-yeah-offline-v1.0.0.tar.gz --mode full --json
+{
+  "command": "doctor",
+  "schemaVersion": "tiny-yeah.doctor.v1",
+  "projectRoot": "/private/tmp/tiny-yeah-raw-c001-project",
+  "mode": "full",
+  "ranAt": "2026-06-23T12:18:19.970Z",
+  "durationMs": 632,
+  "summary": {
+    "overall": "degraded",
+    "pass": 10,
+    "warn": 2,
+    "fail": 0
+  },
+  "checks": [
+    {
+      "id": "node-version",
+      "category": "system",
+      "status": "pass",
+      "detail": "Node 26.3.0 (>= 22.5.0)."
+    },
+    {
+      "id": "powershell-version",
+      "category": "system",
+      "status": "warn",
+      "detail": "PowerShell-only runtime; pwsh not detected (non-Windows dev machine tolerated).",
+      "recoveryHint": "Install PowerShell 7+ before running `tiny-yeah install`."
+    },
+    {
+      "id": "opencode-version",
+      "category": "system",
+      "status": "pass",
+      "detail": "OpenCode 1.15.12 (>= 1.4.0)."
+    },
+    {
+      "id": "opencode-config-parse",
+      "category": "config",
+      "status": "pass",
+      "detail": "opencode config at /private/tmp/tiny-yeah-raw-c001-project/.opencode/opencode.json parsed cleanly."
+    },
+    {
+      "id": "plugin-entry-present",
+      "category": "config",
+      "status": "pass",
+      "detail": "tiny-yeah plugin entry is present in the opencode config."
+    },
+    {
+      "id": "jsonc-valid",
+      "category": "config",
+      "status": "pass",
+      "detail": "JSONC (comments, trailing comma) tolerated by the parser."
+    },
+    {
+      "id": "exports-smoke-import",
+      "category": "integration",
+      "status": "pass",
+      "detail": "All three exports (., ./opencode, ./tui) resolved from .opencode/node_modules/tiny-yeah."
+    },
+    {
+      "id": "stamp-bundle-hash",
+      "category": "bundle-integrity",
+      "status": "pass",
+      "detail": "All 5 managed file hashes match the stamp."
+    },
+    {
+      "id": "stamp-consistency",
+      "category": "bundle-integrity",
+      "status": "pass",
+      "detail": "Stamp schemaVersion consistent; all 5 managed paths accounted for."
+    },
+    {
+      "id": "bundle-sha256sums-full",
+      "category": "bundle-integrity",
+      "status": "pass",
+      "detail": "All 1 SHA256SUMS entries verified against /Users/oneyoon/Workspace/Personal/Tiny-Yeah/release/tiny-yeah-offline-v1.0.0.tar.gz."
+    },
+    {
+      "id": "plugin-cache-path-full",
+      "category": "bundle-integrity",
+      "status": "warn",
+      "detail": "Resolved plugin-cache path does not exist: /Users/oneyoon/.cache/opencode/packages (will be created on next install)."
+    },
+    {
+      "id": "vendor-tarball-referenced-full",
+      "category": "bundle-integrity",
+      "status": "pass",
+      "detail": ".opencode/package.json declares tiny-yeah as 'file:./vendor/tiny-yeah-v1.0.0-bundled.tgz'."
+    }
+  ]
+}
+EXIT_CODE: 0
+
+COMMAND: node --input-type=module plugin import smoke
+{
+  "hasFactory": true,
+  "toolNames": [
+    "health_check",
+    "echo_manifest",
+    "tiny_yeah_install_check"
+  ],
+  "hasInstallCheck": true
+}
+EXIT_CODE: 0

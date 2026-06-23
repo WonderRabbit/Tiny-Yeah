@@ -1,0 +1,47 @@
+NODE_VERSION: v26.3.0
+NPM_VERSION: 11.16.0
+COMMAND: npm run check
+
+> tiny-yeah@1.0.0 check
+> npm run lint && npm run naming:check && npm run typecheck && npm run test && npm run build
+
+
+> tiny-yeah@1.0.0 lint
+> biome check .
+
+/Users/oneyoon/.omo/codegraph/projects/Tiny-Yeah-dd341bf9fcd46809/daemon.sock internalError/fs ━━━━━━━━━━
+
+  ! Unknown file type.
+
+  i Biome encountered a file system entry that's neither a file, directory or symbolic link
+
+
+Checked 130 files in 60ms. No fixes applied.
+Found 1 warning.
+
+> tiny-yeah@1.0.0 naming:check
+> node scripts/naming-check.mjs
+
+Naming check pass: 0 diagnostics across 2 source symbols
+
+> tiny-yeah@1.0.0 typecheck
+> tsc --noEmit
+
+
+> tiny-yeah@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.9 /Users/oneyoon/Workspace/Personal/Tiny-Yeah
+
+
+ Test Files  64 passed (64)
+      Tests  513 passed | 1 todo (514)
+   Start at  21:31:41
+   Duration  16.21s (transform 1.99s, setup 0ms, import 5.24s, tests 76.37s, environment 7ms)
+
+
+> tiny-yeah@1.0.0 build
+> tsc -p tsconfig.build.json
+
+EXIT_CODE: 0

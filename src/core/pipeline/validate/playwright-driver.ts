@@ -26,8 +26,9 @@ export class PlaywrightDriver implements ValidationDriver {
 
   async snapshot(url: string): Promise<RuntimeSnapshot> {
     const mod = await loadPlaywright(this.name);
-    const browser = await mod.chromium.launch({ headless: true });
+    let browser: Awaited<ReturnType<typeof mod.chromium.launch>> | undefined;
     try {
+      browser = await mod.chromium.launch({ headless: true });
       const page = await browser.newPage();
       const response = await page.goto(url, {
         timeout: NAV_TIMEOUT_MS,
@@ -53,7 +54,7 @@ export class PlaywrightDriver implements ValidationDriver {
         { cause: error instanceof Error ? error : undefined },
       );
     } finally {
-      await browser.close();
+      await browser?.close();
     }
   }
 }
