@@ -48,7 +48,7 @@ async function sha256(file: string): Promise<string> {
  */
 async function buildSyntheticBundle(
   dir: string,
-  overrides: { version?: string; airGapComplete?: boolean } = {},
+  overrides: { version?: string; airGapComplete?: boolean; standalonePackage?: boolean } = {},
 ): Promise<string> {
   const version = overrides.version ?? "0.8.0";
   const distDir = path.join(dir, "dist");
@@ -68,6 +68,28 @@ async function buildSyntheticBundle(
   await writeFile(path.join(vendorDir, `tiny-yeah-v${version}-bundled.tgz`), "tarball-bytes\n");
   await writeFile(path.join(binDir, "tiny-yeah.js"), "#!/usr/bin/env node\n");
   await writeFile(path.join(dir, "install-offline.ps1"), "pwsh\n");
+  if (overrides.standalonePackage === true) {
+    const standaloneDir = path.join(dir, "node_modules", PLUGIN_NAME);
+    const standaloneDistDir = path.join(standaloneDir, "dist");
+    await mkdir(standaloneDistDir, { recursive: true });
+    await writeFile(
+      path.join(standaloneDir, "package.json"),
+      `${JSON.stringify(
+        {
+          name: PLUGIN_NAME,
+          version,
+          type: "module",
+          exports: { ".": "./dist/index.js" },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    await writeFile(
+      path.join(standaloneDistDir, "index.js"),
+      `export const VERSION = "${version}";\n`,
+    );
+  }
 
   // Template package.json — references the vendored tarball.
   await writeFile(
@@ -108,6 +130,9 @@ async function buildSyntheticBundle(
       bin: "bin/tiny-yeah.js",
       entrypoint: "install-offline.ps1",
       templatesDir: "templates/opencode",
+      ...(overrides.standalonePackage === true
+        ? { standalonePackageDir: `node_modules/${PLUGIN_NAME}` }
+        : {}),
     },
   };
   await writeFile(path.join(dir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
@@ -195,6 +220,29 @@ describe("lifecycle — fresh install (REQ-TY2-010, REQ-TY2-013)", () => {
       for (const managed of stamp?.managedPaths ?? []) {
         expect(stamp?.managedFileHashes[managed]).toMatch(/^[0-9a-f]{64}$/);
       }
+    } finally {
+      await rm(bundleTmp, { recursive: true, force: true });
+      await rm(projectTmp, { recursive: true, force: true });
+    }
+  });
+
+  it("uses a bundled standalone package tree instead of invoking npm when one is present", async () => {
+    const bundleTmp = await mkdtemp(path.join(os.tmpdir(), "ty2-life-standalone-bundle-"));
+    const projectTmp = await mkdtemp(path.join(os.tmpdir(), "ty2-life-standalone-proj-"));
+    try {
+      const bundleDir = await buildSyntheticBundle(bundleTmp, { standalonePackage: true });
+      const result = await install({
+        bundleDir,
+        projectRoot: projectTmp,
+        skipSmokeImport: true,
+      });
+      expect(result.kind).toBe("installed");
+      expect(result.managedPaths).toContain(".opencode/node_modules/tiny-yeah");
+      const installedPackage = await readFile(
+        path.join(projectTmp, ".opencode", "node_modules", "tiny-yeah", "package.json"),
+        "utf8",
+      );
+      expect(installedPackage).toContain(`"name": "${PLUGIN_NAME}"`);
     } finally {
       await rm(bundleTmp, { recursive: true, force: true });
       await rm(projectTmp, { recursive: true, force: true });

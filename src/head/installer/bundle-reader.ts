@@ -37,6 +37,7 @@ export const installerBlockSchema = z.object({
   bin: z.string().min(1),
   entrypoint: z.string().min(1),
   templatesDir: z.string().min(1),
+  standalonePackageDir: z.string().min(1).optional(),
 });
 
 /**

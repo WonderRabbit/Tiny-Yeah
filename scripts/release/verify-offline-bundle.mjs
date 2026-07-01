@@ -186,6 +186,7 @@ async function installConsumerForSmoke(consumerRoot, manifest, tempRoot) {
  */
 async function verifyInstallerEntries(bundleDir, manifest, tempRoot) {
   const requiredEntries = [
+    "package.json",
     "bin/tiny-yeah.js",
     "templates/opencode/package.json",
     "templates/opencode/plugins/tiny-yeah.ts",
@@ -203,6 +204,10 @@ async function verifyInstallerEntries(bundleDir, manifest, tempRoot) {
   if (missing.length > 0) {
     throw new Error(`bundle is missing self-installing entries: ${missing.join(", ")} (REQ-TY2-001)`);
   }
+  const bundlePackage = JSON.parse(await readFile(path.join(bundleDir, "package.json"), "utf8"));
+  if (bundlePackage.type !== "module") {
+    throw new Error("bundle package.json must set type: module so bin/tiny-yeah.js runs as ESM");
+  }
   if (
     !manifest.installer ||
     typeof manifest.installer.bin !== "string" ||
@@ -210,6 +215,14 @@ async function verifyInstallerEntries(bundleDir, manifest, tempRoot) {
     typeof manifest.installer.templatesDir !== "string"
   ) {
     throw new Error("manifest.installer block is missing or malformed (REQ-TY2-001)");
+  }
+  if (manifest.airGapComplete) {
+    const standalonePackageDir = manifest.installer.standalonePackageDir;
+    if (typeof standalonePackageDir !== "string") {
+      throw new Error("manifest.installer.standalonePackageDir is required for air-gap-complete bundles");
+    }
+    await access(path.join(bundleDir, standalonePackageDir, "package.json"));
+    await access(path.join(bundleDir, standalonePackageDir, "dist", "index.js"));
   }
 
   // Template package.json materialization: the dependency must point at the real tarball,
@@ -225,18 +238,21 @@ async function verifyInstallerEntries(bundleDir, manifest, tempRoot) {
     throw new Error(`template package.json dependency still carries the \${VERSION} placeholder: ${depRef}`);
   }
 
-  // Bin hermeticity smoke (REQ-TY2-018). Run from a bare tmpdir with no node_modules.
+  // Bin hermeticity smoke (REQ-TY2-018). Run from a bare bundle-shaped tmpdir with no node_modules.
   const bareDir = path.join(tempRoot, "bare-bin-smoke");
-  await mkdir(bareDir, { recursive: true });
-  // Copy ONLY the bin into the bare dir — no node_modules, no package.json adjacent.
-  await cp(path.join(bundleDir, "bin", "tiny-yeah.js"), path.join(bareDir, "tiny-yeah.js"));
-  // Stage a manifest.json next to the bin so --version has an authoritative source. This mirrors
-  // the bundle layout (manifest.json adjacent to bin/tiny-yeah.js).
+  await mkdir(path.join(bareDir, "bin"), { recursive: true });
+  // Copy ONLY the ESM context + bin into the bare dir — no node_modules.
+  await cp(path.join(bundleDir, "bin", "tiny-yeah.js"), path.join(bareDir, "bin", "tiny-yeah.js"));
+  await writeFile(
+    path.join(bareDir, "package.json"),
+    `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`,
+  );
+  // Stage a manifest.json next to the package root so --version has an authoritative source.
   await writeFile(
     path.join(bareDir, "manifest.json"),
     `${JSON.stringify({ version: manifest.version }, null, 2)}\n`,
   );
-  const versionResult = await execFileAsync("node", ["tiny-yeah.js", "--version"], {
+  const versionResult = await execFileAsync("node", ["bin/tiny-yeah.js", "--version"], {
     cwd: bareDir,
     maxBuffer,
   });
@@ -246,7 +262,70 @@ async function verifyInstallerEntries(bundleDir, manifest, tempRoot) {
       `bin hermeticity smoke failed: --version printed '${printedVersion}' but manifest version is '${manifest.version}'`,
     );
   }
-  return { entriesPresent: requiredEntries.length, binVersion: printedVersion };
+  return {
+    entriesPresent: requiredEntries.length,
+    binVersion: printedVersion,
+    standalonePackageDir: manifest.installer.standalonePackageDir ?? null,
+  };
+}
+
+async function runStandaloneInstallSmoke(bundleDir, manifest, tempRoot) {
+  const standalonePackageDir = manifest.installer?.standalonePackageDir;
+  if (typeof standalonePackageDir !== "string") {
+    return { standaloneInstall: { available: false }, standaloneDoctor: null };
+  }
+  const targetRoot = path.join(tempRoot, "standalone-install-target");
+  await mkdir(targetRoot, { recursive: true });
+  const installResult = await execFileAsync(
+    process.execPath,
+    [
+      path.join(bundleDir, "bin", "tiny-yeah.js"),
+      "install",
+      "--project",
+      targetRoot,
+      "--bundle",
+      bundleDir,
+      "--yes",
+      "--json",
+    ],
+    {
+      cwd: targetRoot,
+      env: { ...process.env, PATH: "", Path: "" },
+      maxBuffer,
+    },
+  );
+  const parsed = JSON.parse(installResult.stdout.trim());
+  const packageJson = await readJson(
+    path.join(targetRoot, ".opencode", "node_modules", "tiny-yeah", "package.json"),
+  );
+  const doctorResult = await execFileAsync(
+    process.execPath,
+    [
+      path.join(bundleDir, "bin", "tiny-yeah.js"),
+      "doctor",
+      "--project",
+      targetRoot,
+      "--bundle",
+      bundleDir,
+      "--mode",
+      "full",
+      "--json",
+    ],
+    {
+      cwd: targetRoot,
+      env: { ...process.env, PATH: "", Path: "" },
+      maxBuffer,
+    },
+  );
+  return {
+    standaloneInstall: {
+      available: true,
+      kind: parsed.kind,
+      version: parsed.version,
+      packageName: packageJson.name,
+    },
+    standaloneDoctor: JSON.parse(doctorResult.stdout.trim()),
+  };
 }
 
 async function main() {
@@ -264,6 +343,9 @@ async function main() {
     // SPEC-TINY-YEAH-002 Phase 0: assert the bundle is self-installing (entries present,
     // manifest.installer block, template materialization, bin hermeticity smoke).
     report.installer = await verifyInstallerEntries(bundleDir, manifest, tempRoot);
+    const standaloneSmoke = await runStandaloneInstallSmoke(bundleDir, manifest, tempRoot);
+    report.standaloneInstall = standaloneSmoke.standaloneInstall;
+    report.standaloneDoctor = standaloneSmoke.standaloneDoctor;
 
     const consumer = await prepareConsumer(bundleDir, tempRoot, manifest);
 

@@ -364,8 +364,8 @@ describe("doctor — timeout (REQ-TY2-013 F5 binary AC, no hang)", () => {
     }
   });
 
-  it("default timeout is 10000ms (configurable via option)", () => {
-    expect(DEFAULT_DOCTOR_TIMEOUT_MS).toBe(10000);
+  it("default timeout is 30000ms (configurable via option)", () => {
+    expect(DEFAULT_DOCTOR_TIMEOUT_MS).toBe(30000);
   });
 });
 

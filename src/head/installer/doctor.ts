@@ -18,7 +18,7 @@
 //
 // Timeout (F5 binary AC): the whole run is wrapped in Promise.race against a timer. On timeout a
 // DOCTOR_TIMEOUT typed result is emitted and overall is set to "degraded" (NEVER a hang). The
-// timeout is configurable via DOCTOR_TIMEOUT_MS env (default 10000ms) or the timeoutMs option.
+// timeout is configurable via DOCTOR_TIMEOUT_MS env (default 30000ms) or the timeoutMs option.
 //
 // --json schema: doctorReportSchema (schemaVersion "tiny-yeah.doctor.v1"). The bin emits the report
 // as JSON when --json is passed.
@@ -46,7 +46,7 @@ export const MIN_OPENCODE_VERSION = "1.4.0";
 export const DOCTOR_SCHEMA_VERSION = "tiny-yeah.doctor.v1" as const;
 
 /** Default doctor timeout (ms). Overridable via DOCTOR_TIMEOUT_MS env or the timeoutMs option. */
-export const DEFAULT_DOCTOR_TIMEOUT_MS = 10000;
+export const DEFAULT_DOCTOR_TIMEOUT_MS = 30000;
 
 /** Doctor mode: standard runs the baseline checks; full adds deeper checks (e.g. bundle SHA256SUMS). */
 export type DoctorMode = "standard" | "full";

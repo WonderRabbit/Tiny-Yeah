@@ -45,11 +45,13 @@ import { computeInstallPlan, type InstallPlan } from "./plan.js";
 import { compareSemver } from "./semver.js";
 import {
   computeManagedFileHashes,
+  hashManagedPathIfExists,
   INSTALL_STAMP_SCHEMA_VERSION,
   type InstallStamp,
   readStamp,
   writeStamp,
 } from "./stamp.js";
+import { copyStandalonePackage, STANDALONE_PACKAGE_DEST_REL } from "./standalone-package.js";
 import { atomicCopyFile, atomicCopyFileBinary, backupAndWrite } from "./writer.js";
 
 /**
@@ -406,8 +408,19 @@ export async function install(options: InstallOptions): Promise<InstallResult> {
     await backupAndWrite(projectRoot, configRelDest, mergedText);
     managedWritten.push(configRelDest);
 
+    const standaloneManagedPath = await copyStandalonePackage({
+      bundle,
+      projectRoot,
+      replaceExisting:
+        options.force === true ||
+        priorStamp?.managedPaths.includes(STANDALONE_PACKAGE_DEST_REL) === true,
+    });
+    if (standaloneManagedPath !== undefined) {
+      managedWritten.push(standaloneManagedPath);
+    }
+
     // (10) npm install --offline (REQ-TY2-017). Skipped in unit tests.
-    if (options.skipNpmInstall !== true) {
+    if (options.skipNpmInstall !== true && standaloneManagedPath === undefined) {
       await runNpmInstallOffline(projectRoot);
     }
 
@@ -751,7 +764,16 @@ export async function update(options: UpdateOptions): Promise<UpdateResult> {
     await backupAndWrite(projectRoot, configRelDest, mergedText);
     managedWritten.push(configRelDest);
 
-    if (options.skipNpmInstall !== true) {
+    const standaloneManagedPath = await copyStandalonePackage({
+      bundle,
+      projectRoot,
+      replaceExisting: true,
+    });
+    if (standaloneManagedPath !== undefined) {
+      managedWritten.push(standaloneManagedPath);
+    }
+
+    if (options.skipNpmInstall !== true && standaloneManagedPath === undefined) {
       await runNpmInstallOffline(projectRoot);
     }
 
@@ -851,19 +873,7 @@ export type UninstallResult =
  * (ENOENT). Any other read error propagates.
  */
 async function sha256IfExists(absPath: string): Promise<string | undefined> {
-  try {
-    const content = await readFile(absPath);
-    return createHash("sha256").update(content).digest("hex");
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      (error as { code?: unknown }).code === "ENOENT"
-    ) {
-      return undefined;
-    }
-    throw error;
-  }
+  return await hashManagedPathIfExists(absPath);
 }
 
 /**
@@ -934,7 +944,7 @@ export async function uninstall(options: UninstallOptions): Promise<UninstallRes
       }
       // Hash matches (or no recorded hash — treat as unmodified-managed, remove).
       try {
-        await rm(abs, { force: true });
+        await rm(abs, { recursive: true, force: true });
         removed.push(relPath);
       } catch {
         // Best-effort: report as alreadyAbsent if removal failed (e.g. race).

@@ -168,6 +168,44 @@ describe("bin tiny-yeah install — E2E (REQ-TY2-010)", () => {
     }
   });
 
+  it("install rejects missing archive bundle paths before any project writes", async () => {
+    const archivePath = path.join(bundleDir, "does-not-exist.tar.gz");
+    const archiveProject = await mkdtemp(
+      path.join(os.tmpdir(), "ty2-bininstall-missing-archive-proj-"),
+    );
+    try {
+      const result = await execFileAsync(
+        "node",
+        [
+          binPath,
+          "install",
+          "--bundle",
+          archivePath,
+          "--project",
+          archiveProject,
+          "--dry-run",
+          "--json",
+        ],
+        { reject: false },
+      ).catch((error: unknown) => error);
+
+      const code = getProperty(result, "code");
+      const stdout = getProperty(result, "stdout");
+      expect(code).toBe(2);
+      expect(typeof stdout).toBe("string");
+      const parsed = JSON.parse(typeof stdout === "string" ? stdout : "");
+      expect(getProperty(parsed, "command")).toBe("install");
+      expect(getProperty(parsed, "ok")).toBe(false);
+      expect(getProperty(parsed, "code")).toBe("BUNDLE_ARCHIVE_UNPACK_FAILED");
+      expect(getProperty(parsed, "error")).toContain("does-not-exist.tar.gz");
+      await expect(
+        readFile(path.join(archiveProject, ".opencode", "package.json"), "utf8"),
+      ).rejects.toThrow();
+    } finally {
+      await rm(archiveProject, { recursive: true, force: true });
+    }
+  });
+
   it("install --dry-run accepts a release tarball path as --bundle", async () => {
     // Given: a valid bundle directory archived the same way release:offline emits it.
     const archiveRoot = await mkdtemp(path.join(os.tmpdir(), "ty2-bininstall-archive-root-"));

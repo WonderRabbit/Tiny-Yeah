@@ -20,7 +20,7 @@
 // v1 stamps are REJECTED with INSTALL_STAMP_SCHEMA_MISMATCH so callers can prompt the user.
 
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { MalformedJsonError } from "../../core/state/file-store.js";
@@ -155,6 +155,59 @@ export async function writeStamp(projectRoot: string, stamp: InstallStamp): Prom
   await atomicWriteJson(projectRoot, INSTALL_STAMP_REL_PATH, stamp);
 }
 
+async function hashFile(absPath: string): Promise<string> {
+  const content = await readFile(absPath);
+  return createHash("sha256").update(content).digest("hex");
+}
+
+async function collectManagedFiles(currentPath: string): Promise<string[]> {
+  const entries = await readdir(currentPath, { withFileTypes: true });
+  const sorted = [...entries].sort((left, right) => left.name.localeCompare(right.name));
+  const files: string[] = [];
+  for (const entry of sorted) {
+    const childPath = path.join(currentPath, entry.name);
+    const childInfo = await stat(childPath);
+    if (childInfo.isDirectory()) {
+      files.push(...(await collectManagedFiles(childPath)));
+    } else if (childInfo.isFile()) {
+      files.push(childPath);
+    }
+  }
+  return files;
+}
+
+async function hashDirectory(absPath: string): Promise<string> {
+  const hash = createHash("sha256");
+  const files = await collectManagedFiles(absPath);
+  for (const filePath of files) {
+    const relPath = path.relative(absPath, filePath).split(path.sep).join("/");
+    hash.update("file\0");
+    hash.update(relPath);
+    hash.update("\0");
+    hash.update(await hashFile(filePath));
+    hash.update("\0");
+  }
+  return hash.digest("hex");
+}
+
+export async function hashManagedPathIfExists(absPath: string): Promise<string | undefined> {
+  try {
+    const info = await stat(absPath);
+    if (info.isDirectory()) return await hashDirectory(absPath);
+    if (info.isFile()) return await hashFile(absPath);
+    return undefined;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "ENOENT"
+    ) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 /**
  * Compute the managedFileHashes map for an install: SHA-256 of every managed file's current
  * content on disk, keyed by project-root-relative path. Used at install time to populate the
@@ -170,20 +223,9 @@ export async function computeManagedFileHashes(
   const hashes: Record<string, string> = {};
   for (const relPath of managedPaths) {
     const abs = path.join(projectRoot, relPath);
-    try {
-      const content = await readFile(abs);
-      const hash = createHash("sha256").update(content).digest("hex");
+    const hash = await hashManagedPathIfExists(abs);
+    if (hash !== undefined) {
       hashes[relPath] = hash;
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        "code" in error &&
-        (error as { code?: unknown }).code === "ENOENT"
-      ) {
-        // Skip missing files — caller's plan should guarantee existence at install time.
-        continue;
-      }
-      throw error;
     }
   }
   return hashes;

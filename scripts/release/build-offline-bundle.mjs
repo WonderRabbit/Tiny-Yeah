@@ -151,6 +151,15 @@ Tiny-Yeah is licensed per package.json \`license\`. See the project LICENSE if p
   );
 }
 
+async function writeBundlePackageJson(bundleDir, packageJson) {
+  await writeJson(path.join(bundleDir, "package.json"), {
+    name: `${packageJson.name}-offline-bundle`,
+    version: packageJson.version,
+    private: true,
+    type: "module",
+  });
+}
+
 /**
  * SPEC-TINY-YEAH-002 Phase 0: copy the self-installing entries into the bundle and materialize
  * the template package.json's dependency string to the actual vendored tarball name.
@@ -194,6 +203,13 @@ async function writeInstallerEntries(bundleDir, actualTarballName) {
   await writeFile(templatePackagePath, `${JSON.stringify(templatePackage, null, 2)}\n`);
 
   return { bin: "bin/tiny-yeah.js", entrypoint: "install-offline.ps1", templatesDir: "templates/opencode" };
+}
+
+async function writeStandalonePackageTree(bundleDir, stagingDir, airGapComplete) {
+  if (!airGapComplete) return undefined;
+  const standaloneRel = path.join("node_modules", "tiny-yeah");
+  await cp(stagingDir, path.join(bundleDir, standaloneRel), { recursive: true });
+  return standaloneRel.split(path.sep).join("/");
 }
 
 async function main() {
@@ -260,11 +276,17 @@ async function main() {
     const tarballName = `tiny-yeah-v${version}${airGapComplete ? "-bundled" : ""}.tgz`;
     await rename(path.join(bundleDir, "vendor", generatedTarballName), path.join(bundleDir, "vendor", tarballName));
 
+    await writeBundlePackageJson(bundleDir, packageJson);
     await writeBundleReadme(bundleDir, version, tarballName, airGapComplete);
 
     // SPEC-TINY-YEAH-002 Phase 0: copy the self-installing entries (bin, templates, .ps1) and
     // materialize the template package.json's dependency string to the real vendored tarball.
-    const installerDescriptor = await writeInstallerEntries(bundleDir, tarballName);
+    const standalonePackageDir = await writeStandalonePackageTree(bundleDir, stagingDir, airGapComplete);
+    const baseInstallerDescriptor = await writeInstallerEntries(bundleDir, tarballName);
+    const installerDescriptor =
+      standalonePackageDir === undefined
+        ? baseInstallerDescriptor
+        : { ...baseInstallerDescriptor, standalonePackageDir };
 
     // SPEC-TINY-YEAH-002 Phase 2 (REQ-TY2-001): the bundle DIRECTORY carries dist/ at its root
     // so the hermetic bin can dynamically import the installer lifecycle

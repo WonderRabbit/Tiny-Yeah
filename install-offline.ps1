@@ -8,8 +8,9 @@
 # No install-offline.sh is shipped — PowerShell-only runtime is a FROZEN constraint (D1,
 # REQ-TY2-016).
 #
-# Phase 0 status: this wrapper is functional and forwards args, but `tiny-yeah install` prints
-# "not implemented in Phase 0" and exits 2. The wrapper surfaces that exit code faithfully.
+# Complete offline bundles carry a ready node_modules/tiny-yeah tree, so the installer can copy
+# that tree into .opencode/ and avoid npm at runtime. Older or incomplete bundles still fall back
+# to the lifecycle's npm-based offline path.
 #
 # Usage (from an unpacked bundle directory):
 #   pwsh ./install-offline.ps1                              # install into CWD

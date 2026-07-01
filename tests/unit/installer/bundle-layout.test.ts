@@ -84,6 +84,7 @@ describe("offline-bundle self-installing layout (REQ-TY2-001)", () => {
       const entries = await listTarEntries(bundle.archive);
 
       const required = [
+        "package.json",
         "bin/tiny-yeah.js",
         "templates/opencode/package.json",
         "templates/opencode/plugins/tiny-yeah.ts",
@@ -95,15 +96,30 @@ describe("offline-bundle self-installing layout (REQ-TY2-001)", () => {
         expect(entries).toContain(fullEntry);
       }
 
+      const bundlePackageText = await readTarEntry(bundle.archive, `${bundle.topDir}/package.json`);
+      const bundlePackage = JSON.parse(bundlePackageText) as { type?: string };
+      expect(bundlePackage.type).toBe("module");
+
       // manifest.installer block present with the expected shape.
       const manifestText = await readTarEntry(bundle.archive, `${bundle.topDir}/manifest.json`);
       const manifest = JSON.parse(manifestText) as {
-        installer?: { bin?: string; entrypoint?: string; templatesDir?: string };
+        airGapComplete?: boolean;
+        installer?: {
+          bin?: string;
+          entrypoint?: string;
+          templatesDir?: string;
+          standalonePackageDir?: string;
+        };
       };
       expect(manifest.installer).toBeDefined();
       expect(manifest.installer?.bin).toBe("bin/tiny-yeah.js");
       expect(manifest.installer?.entrypoint).toBe("install-offline.ps1");
       expect(manifest.installer?.templatesDir).toBe("templates/opencode");
+      if (manifest.airGapComplete === true) {
+        expect(manifest.installer?.standalonePackageDir).toBe("node_modules/tiny-yeah");
+        expect(entries).toContain(`${bundle.topDir}/node_modules/tiny-yeah/package.json`);
+        expect(entries).toContain(`${bundle.topDir}/node_modules/tiny-yeah/dist/index.js`);
+      }
     },
   );
 

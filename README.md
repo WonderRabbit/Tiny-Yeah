@@ -37,6 +37,35 @@ npm run format     # biome format --write .
 
 단일 테스트: `npx vitest run tests/characterization/<file>.test.ts`
 
+## Windows standalone offline 실행
+
+비개발자는 [Windows standalone 설치 가이드](docs/windows-standalone-install.md)를 먼저
+보세요. 이 저장소를 GitHub ZIP 또는 `git clone`으로 받은 뒤에는 루트에서 아래 명령만 실행하면
+저장소 안의 `release/tiny-yeah-offline-v<version>.tar.gz`를 자동으로 찾아 설치합니다.
+
+```powershell
+pwsh .\install-from-repo.ps1 -TargetProject C:\path\to\opencode-project -Yes
+```
+
+릴리스 tarball만 따로 받은 경우에는 압축을 풀고 bundle 루트에서 실행합니다.
+
+```powershell
+pwsh ./install-offline.ps1 -TargetProject C:\path\to\opencode-project -Yes
+```
+
+개발자가 새 릴리스 번들을 만들고 검증할 때는 아래 명령을 사용합니다.
+
+```bash
+npm run release:offline
+npm run verify:offline -- --bundle release/tiny-yeah-offline-v1.0.0.tar.gz
+```
+
+`airGapComplete: true` 번들은 `node_modules/tiny-yeah` 준비본을 함께 담습니다. installer가 준비본을
+`.opencode/`로 복사하므로 대상 PC에서 `npm install`을 다시 실행하지 않아도 됩니다.
+
+번들이 준비본을 담지 못한 경우에는 manifest가 `airGapComplete: false`로 남고, 검증 스크립트도
+그 상태를 숨기지 않습니다.
+
 ## 특성화 테스트
 
 `tests/characterization/`은 마이그레이션 전에 세 donor codebase(Tiny-Chu, Tinker.Gen, ui_pop)의
