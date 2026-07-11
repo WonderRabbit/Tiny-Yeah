@@ -3,3 +3,12 @@ dist/
 *.tsbuildinfo
 .vitest-cache/
 .omo/
+
+# OS metadata
+.DS_Store
+
+# Local orchestration tooling (user-local overlays, not product code)
+.claude/
+.moai/
+.omc/
+.mcp.json
