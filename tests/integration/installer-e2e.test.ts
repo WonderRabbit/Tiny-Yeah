@@ -22,9 +22,9 @@
 //   uninstall — exit 0, managed paths removed, stamp gone, plugin entry stripped, keep-me.md
 //             survives.
 
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync, execSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, statfs, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -33,6 +33,59 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const binPath = path.join(repoRoot, "bin", "tiny-yeah.js");
 const releaseDir = path.join(repoRoot, "release");
+const minInstallerTempFreeBytes = 1024 * 1024 * 1024;
+const capacityFixtureName = ".tiny-yeah-capacity.json";
+
+type InstallerCapacityProbe = {
+  readonly availableBytes: number;
+  readonly source: string;
+};
+
+function isNodeError(error: unknown, code: string): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === code;
+}
+
+function parseInstallerCapacityFixture(raw: string, fixturePath: string): InstallerCapacityProbe {
+  const parsed: unknown = JSON.parse(raw);
+  if (
+    parsed === null ||
+    typeof parsed !== "object" ||
+    !("availableBytes" in parsed) ||
+    typeof parsed.availableBytes !== "number" ||
+    !Number.isSafeInteger(parsed.availableBytes) ||
+    parsed.availableBytes < 0
+  ) {
+    throw new Error(`installer e2e: invalid capacity fixture at ${fixturePath}`);
+  }
+  return { availableBytes: parsed.availableBytes, source: "fixture" };
+}
+
+async function readInstallerCapacityProbe(tmpRoot: string): Promise<InstallerCapacityProbe> {
+  const fixturePath = path.join(tmpRoot, capacityFixtureName);
+  try {
+    return parseInstallerCapacityFixture(await readFile(fixturePath, "utf8"), fixturePath);
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) {
+      const stats = await statfs(tmpRoot);
+      return { availableBytes: stats.bavail * stats.bsize, source: "statfs" };
+    }
+    throw error;
+  }
+}
+
+async function resolveInstallerTempRoot(): Promise<string> {
+  const configuredRoot = process.env.TINY_YEAH_INSTALLER_E2E_TMP_ROOT;
+  const tmpRoot = path.resolve(configuredRoot ?? os.tmpdir());
+  await mkdir(tmpRoot, { recursive: true });
+  const probe = await readInstallerCapacityProbe(tmpRoot);
+  if (probe.availableBytes < minInstallerTempFreeBytes) {
+    throw new Error(
+      `installer e2e: temp root has insufficient free space before tar extraction: ${tmpRoot} ` +
+        `(available=${probe.availableBytes}, required=${minInstallerTempFreeBytes}, probe=${probe.source})`,
+    );
+  }
+  return tmpRoot;
+}
 
 /**
  * Resolve the path to a real offline bundle tarball. Prefers the highest-versioned bundle that
@@ -85,20 +138,36 @@ function resolveRealBundle(): string | undefined {
 }
 
 interface SuiteContext {
-  bundleArchive: string;
-  bundleDir: string;
-  targetProject: string;
-  xdgCacheHome: string;
-  bundleVersion: string;
+  readonly bundleArchive: string;
+  readonly bundleDir: string;
+  readonly bundleVersion: string;
+  readonly targetProject: string;
+  readonly workRoot: string;
+  readonly xdgCacheHome: string;
 }
 
 const ctx: { value: SuiteContext | undefined } = { value: undefined };
+const setupState: { blockedReason: string | undefined } = { blockedReason: undefined };
 
 beforeAll(async () => {
   const archive = resolveRealBundle();
-  if (archive === undefined) return;
+  if (archive === undefined) {
+    setupState.blockedReason =
+      "no real offline bundle is available and npm run release:offline did not produce one";
+    return;
+  }
+  let tempRoot: string;
+  try {
+    tempRoot = await resolveInstallerTempRoot();
+  } catch (error) {
+    if (error instanceof Error) {
+      setupState.blockedReason = `temp preflight failed before tar extraction: ${error.message}`;
+      return;
+    }
+    throw error;
+  }
   // Unpack the bundle into a tmpdir.
-  const workRoot = await mkdtemp(path.join(os.tmpdir(), "ty2-e2e-"));
+  const workRoot = await mkdtemp(path.join(tempRoot, "ty2-e2e-"));
   const bundleDir = path.join(workRoot, "bundle");
   await mkdir(bundleDir, { recursive: true });
   // `tar -xzf <archive> -C <bundleDir>` extracts `<bundleName>/...` under bundleDir.
@@ -128,7 +197,7 @@ beforeAll(async () => {
   }
 
   // Create the e2e target project.
-  const targetProject = await mkdtemp(path.join(os.tmpdir(), "ty2-e2e-target-"));
+  const targetProject = await mkdtemp(path.join(tempRoot, "ty2-e2e-target-"));
   await writeFile(
     path.join(targetProject, "package.json"),
     `${JSON.stringify({ name: "e2e-target", version: "0.0.0", private: true }, null, 2)}\n`,
@@ -141,12 +210,12 @@ beforeAll(async () => {
   );
 
   // Deterministic XDG_CACHE_HOME so resolvedPluginCachePath is verifiable.
-  const xdgCacheHome = path.join(targetProject, "..", `ty2-e2e-xdg-${Date.now()}`);
-  await mkdir(xdgCacheHome, { recursive: true });
+  const xdgCacheHome = await mkdtemp(path.join(tempRoot, "ty2-e2e-xdg-"));
 
   ctx.value = {
     bundleArchive: archive,
     bundleDir: unpackedRoot,
+    workRoot,
     targetProject,
     xdgCacheHome,
     bundleVersion,
@@ -156,52 +225,44 @@ beforeAll(async () => {
 afterAll(async () => {
   const c = ctx.value;
   if (c === undefined) return;
-  await rm(path.dirname(c.bundleDir), { recursive: true, force: true }).catch(() => {});
+  await rm(c.workRoot, { recursive: true, force: true }).catch(() => {});
   await rm(c.targetProject, { recursive: true, force: true }).catch(() => {});
   await rm(c.xdgCacheHome, { recursive: true, force: true }).catch(() => {});
 });
 
-function skipIfNoBundle() {
-  return ctx.value === undefined;
+function requireReadyContext(): SuiteContext {
+  const c = ctx.value;
+  if (c !== undefined) return c;
+  const reason = setupState.blockedReason ?? "setup did not complete before tests ran";
+  throw new Error(`[installer-e2e BLOCKED] ${reason}`);
 }
 
-/**
- * Run the bin and capture exit code regardless of pass/fail. execFileSync throws on non-zero
- * exit, so we wrap with a fallback that reuses the child-process error payload.
- */
 function runBinCapture(
   args: string[],
   env: NodeJS.ProcessEnv,
 ): { code: number; stdout: string; stderr: string } {
-  try {
-    const stdout = execFileSync(process.execPath, [binPath, ...args], {
-      env,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      maxBuffer: 1024 * 1024 * 64,
-    });
-    return { code: 0, stdout, stderr: "" };
-  } catch (error) {
-    const e = error as { status?: number; stdout?: string; stderr?: string; message?: string };
-    return {
-      code: typeof e.status === "number" ? e.status : 1,
-      stdout: typeof e.stdout === "string" ? e.stdout : "",
-      stderr: typeof e.stderr === "string" ? e.stderr : (e.message ?? ""),
-    };
-  }
+  const result = spawnSync(process.execPath, [binPath, ...args], {
+    env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: 1024 * 1024 * 64,
+  });
+  return {
+    code: result.status ?? 1,
+    stdout: result.stdout,
+    stderr: result.stderr || result.error?.message || "",
+  };
 }
 
 describe("installer-e2e — REAL offline-bundle install → OpenCode imports → doctor → update → uninstall", () => {
-  it("setup resolved a real bundle (skip the suite otherwise)", () => {
-    if (skipIfNoBundle()) {
-      console.warn("[installer-e2e] no real bundle available — suite is a no-op");
-    }
-    expect(true).toBe(true);
+  it("setup resolved a real bundle and passed temp preflight", () => {
+    const c = requireReadyContext();
+    expect(existsSync(c.bundleArchive)).toBe(true);
+    expect(existsSync(path.join(c.bundleDir, "manifest.json"))).toBe(true);
   });
 
   it("install writes .opencode/ + stamp and exits 0 (REQ-TY2-010)", () => {
-    if (skipIfNoBundle()) return;
-    const c = ctx.value as SuiteContext;
+    const c = requireReadyContext();
     const result = runBinCapture(
       ["install", "--project", c.targetProject, "--bundle", c.bundleDir, "--yes", "--json"],
       { ...process.env, XDG_CACHE_HOME: c.xdgCacheHome },
@@ -213,8 +274,7 @@ describe("installer-e2e — REAL offline-bundle install → OpenCode imports →
   });
 
   it("install stamp is v2 schema with 5 managedFileHashes + resolvedPluginCachePath (REQ-TY2-015)", async () => {
-    if (skipIfNoBundle()) return;
-    const c = ctx.value as SuiteContext;
+    const c = requireReadyContext();
     const stampRaw = await readFile(
       path.join(c.targetProject, ".opencode", ".tiny-yeah-install.json"),
       "utf8",
@@ -244,8 +304,7 @@ describe("installer-e2e — REAL offline-bundle install → OpenCode imports →
   });
 
   it("the installed package exposes three exports + createTinyYeahPlugin is a function (REQ-TY2-001/013)", async () => {
-    if (skipIfNoBundle()) return;
-    const c = ctx.value as SuiteContext;
+    const c = requireReadyContext();
     const packageRoot = path.join(c.targetProject, ".opencode", "node_modules", "tiny-yeah");
     const pkgJsonRaw = await readFile(path.join(packageRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgJsonRaw) as {
@@ -273,8 +332,7 @@ describe("installer-e2e — REAL offline-bundle install → OpenCode imports →
   });
 
   it("opencode.json carries the tiny-yeah plugin entry and is JSONC-valid (REQ-TY2-008)", async () => {
-    if (skipIfNoBundle()) return;
-    const c = ctx.value as SuiteContext;
+    const c = requireReadyContext();
     // Locate opencode.json OR opencode.jsonc under .opencode/.
     const candidates = [
       path.join(c.targetProject, ".opencode", "opencode.jsonc"),
@@ -287,8 +345,8 @@ describe("installer-e2e — REAL offline-bundle install → OpenCode imports →
         raw = await readFile(candidate, "utf8");
         found = candidate;
         break;
-      } catch {
-        // try next
+      } catch (error) {
+        if (!isNodeError(error, "ENOENT")) throw error;
       }
     }
     expect(found, "no opencode.json[c] written by install").not.toBe("");
@@ -310,15 +368,13 @@ describe("installer-e2e — REAL offline-bundle install → OpenCode imports →
   });
 
   it("user-owned keep-me.md survived the install", async () => {
-    if (skipIfNoBundle()) return;
-    const c = ctx.value as SuiteContext;
+    const c = requireReadyContext();
     const kept = await readFile(path.join(c.targetProject, ".opencode", "keep-me.md"), "utf8");
     expect(kept).toContain("user-owned");
   });
 
   it("doctor exits 0 and reports the smoke-import check (REQ-TY2-013)", () => {
-    if (skipIfNoBundle()) return;
-    const c = ctx.value as SuiteContext;
+    const c = requireReadyContext();
     const result = runBinCapture(["doctor", "--project", c.targetProject, "--json"], {
       ...process.env,
       XDG_CACHE_HOME: c.xdgCacheHome,
@@ -345,8 +401,7 @@ describe("installer-e2e — REAL offline-bundle install → OpenCode imports →
   });
 
   it("update cycle: re-install with --force refreshes the stamp; keep-me.md survives (REQ-TY2-011)", async () => {
-    if (skipIfNoBundle()) return;
-    const c = ctx.value as SuiteContext;
+    const c = requireReadyContext();
     // Capture stamp installedAt BEFORE.
     const stampBeforeRaw = await readFile(
       path.join(c.targetProject, ".opencode", ".tiny-yeah-install.json"),
@@ -396,8 +451,7 @@ describe("installer-e2e — REAL offline-bundle install → OpenCode imports →
   });
 
   it("uninstall removes managed paths + stamp + plugin entry; keep-me.md survives (REQ-TY2-012)", async () => {
-    if (skipIfNoBundle()) return;
-    const c = ctx.value as SuiteContext;
+    const c = requireReadyContext();
     const stampPath = path.join(c.targetProject, ".opencode", ".tiny-yeah-install.json");
     const stampBeforeRaw = await readFile(stampPath, "utf8");
     const stampBefore = JSON.parse(stampBeforeRaw) as { managedPaths: string[] };

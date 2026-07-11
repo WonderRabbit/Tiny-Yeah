@@ -14,365 +14,132 @@
 // hermetically (node bin/tiny-yeah.js --version works WITHOUT node_modules — REQ-TY2-018).
 
 import { execFile } from "node:child_process";
-import { access, cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { mkdtemp } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { runNpm } from "./npm-runner.mjs";
+import {
+  findBundleDir,
+  installConsumerForSmoke,
+  prepareConsumer,
+  readJson,
+  runSmoke,
+  runStandaloneInstallSmoke,
+  verifyInstallerEntries,
+  verifyNoForbiddenStandaloneEntries,
+} from "./verify-offline-bundle/bundle-checks.mjs";
+import { maxBuffer } from "./verify-offline-bundle/constants.mjs";
+import {
+  errorMessage,
+  isNoSpaceError,
+  stableStringify,
+  VerifyOfflineBundleError,
+} from "./verify-offline-bundle/errors.mjs";
+import { assertReadableBundle, parseArgs } from "./verify-offline-bundle/input.mjs";
+import { assertTempCapacity, cleanupTempRoot, resolveTmpRoot } from "./verify-offline-bundle/temp-root.mjs";
 
 const execFileAsync = promisify(execFile);
-const maxBuffer = 1024 * 1024 * 32;
-
-function parseArgs(argv) {
-  const parsed = { bundle: undefined, keepTemp: false };
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--bundle") {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--bundle requires an archive path");
-      parsed.bundle = path.resolve(value);
-      index += 1;
-    } else if (arg === "--keep-temp") {
-      parsed.keepTemp = true;
-    } else {
-      throw new Error(`unknown argument: ${arg}`);
-    }
-  }
-  if (parsed.bundle === undefined) {
-    throw new Error("usage: npm run verify:offline -- --bundle /path/to/tiny-yeah-offline-vX.Y.Z.tar.gz");
-  }
-  return parsed;
-}
-
-async function readJson(filePath) {
-  return JSON.parse(await readFile(filePath, "utf8"));
-}
-
-async function findBundleDir(tempRoot) {
-  const entries = await readdir(tempRoot, { withFileTypes: true });
-  const dirs = entries.filter((entry) => entry.isDirectory() && entry.name.startsWith("tiny-yeah-offline-v"));
-  if (dirs.length !== 1) throw new Error(`expected one unpacked tiny-yeah-offline directory, found ${dirs.length}`);
-  return path.join(tempRoot, dirs[0].name);
-}
-
-async function prepareConsumer(bundleDir, tempRoot, manifest) {
-  const consumerRoot = path.join(tempRoot, "consumer");
-  const consumerNodeModules = path.join(consumerRoot, "node_modules");
-  await mkdir(consumerRoot, { recursive: true });
-  await mkdir(consumerNodeModules, { recursive: true });
-  const tarballName = path.basename(manifest.packageTarball);
-  // Place the project tarball where node can resolve it via file: protocol.
-  const packageJson = {
-    name: "tiny-yeah-offline-consumer",
-    private: true,
-    type: "module",
-    dependencies: { "tiny-yeah": `file:./${path.basename(manifest.packageTarball)}` },
-  };
-  await cp(path.join(bundleDir, manifest.packageTarball), path.join(consumerRoot, tarballName));
-  await writeFile(path.join(consumerRoot, "package.json"), `${JSON.stringify(packageJson, null, 2)}\n`);
-  return { consumerRoot, tarballName };
-}
-
-async function runSmoke(consumerRoot) {
-  // Import the project's entry points from the extracted consumer node_modules. This verifies the
-  // bundled dist/ is structurally valid (the ./, ./opencode, ./tui exports resolve).
-  const smoke = `
-import { createTinyYeahLibrarySurface, VERSION } from "tiny-yeah";
-const root = process.cwd();
-const surface = createTinyYeahLibrarySurface({ root });
-const install = surface.tiny_yeah_install_check;
-const pluginMod = await import("tiny-yeah/opencode");
-const tuiMod = await import("tiny-yeah/tui");
-console.log(JSON.stringify({
-  version: VERSION,
-  toolCount: Object.keys(surface).length,
-  hasInstallCheck: typeof install?.run === "function",
-  hasPlugin: typeof pluginMod.createTinyYeahPlugin === "function",
-  hasTui: typeof tuiMod.TinyYeahOpenCodeTuiPlugin?.tui === "function",
-  tuiId: tuiMod.TinyYeahOpenCodeTuiPlugin?.id,
-}));
-`;
-  const result = await execFileAsync("node", ["--input-type=module", "-e", smoke], {
-    cwd: consumerRoot,
-    maxBuffer,
-  });
-  return JSON.parse(result.stdout.trim());
-}
-
-async function installConsumerForSmoke(consumerRoot, manifest, tempRoot) {
-  if (manifest.airGapComplete) {
-    const emptyCache = path.join(tempRoot, "empty-npm-cache");
-    await mkdir(emptyCache, { recursive: true });
-    try {
-      await runNpm(
-        [
-          "install",
-          "--offline",
-          "--cache",
-          emptyCache,
-          "--legacy-peer-deps",
-          "--ignore-scripts",
-          "--no-audit",
-          "--fund=false",
-        ],
-        {
-          cwd: consumerRoot,
-          env: {
-            ...process.env,
-            npm_config_registry: "http://127.0.0.1:9/",
-            npm_config_legacy_peer_deps: "true",
-            npm_config_audit: "false",
-            npm_config_fund: "false",
-          },
-          maxBuffer,
-        },
-      );
-      return { ok: true, mode: "offline", offlineInstallOk: true };
-    } catch (error) {
-      return {
-        ok: false,
-        mode: "offline",
-        offlineInstallOk: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
-  const cacheDir = path.join(tempRoot, "online-npm-cache");
-  await mkdir(cacheDir, { recursive: true });
-  try {
-    await runNpm(
-      ["install", "--cache", cacheDir, "--legacy-peer-deps", "--ignore-scripts", "--no-audit", "--fund=false"],
-      {
-        cwd: consumerRoot,
-        env: {
-          ...process.env,
-          npm_config_legacy_peer_deps: "true",
-          npm_config_audit: "false",
-          npm_config_fund: "false",
-        },
-        maxBuffer,
-      },
-    );
-    return { ok: true, mode: "online", offlineInstallOk: null };
-  } catch (error) {
-    return {
-      ok: false,
-      mode: "online",
-      offlineInstallOk: null,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
-/**
- * SPEC-TINY-YEAH-002 Phase 0: verify the bundle is self-installing.
- *
- * Checks (REQ-TY2-001 AC):
- *   - manifest.installer block is present with bin/entrypoint/templatesDir.
- *   - all five new entries exist on disk:
- *       bin/tiny-yeah.js
- *       templates/opencode/package.json
- *       templates/opencode/plugins/tiny-yeah.ts
- *       templates/opencode/tui.json
- *       install-offline.ps1
- *   - the template package.json's dependency string references the actual vendored tarball
- *     (materialization check — no `${VERSION}` placeholder leakage).
- *   - bin hermeticity smoke (REQ-TY2-018 AC): `node <unpack>/bin/tiny-yeah.js --version`
- *     runs from a bare tmpdir with NO node_modules and prints the version. This proves the bin
- *     imports only node: built-ins.
- *
- * Throws on any failure (non-zero exit propagation).
- */
-async function verifyInstallerEntries(bundleDir, manifest, tempRoot) {
-  const requiredEntries = [
-    "package.json",
-    "bin/tiny-yeah.js",
-    "templates/opencode/package.json",
-    "templates/opencode/plugins/tiny-yeah.ts",
-    "templates/opencode/tui.json",
-    "install-offline.ps1",
-  ];
-  const missing = [];
-  for (const rel of requiredEntries) {
-    try {
-      await access(path.join(bundleDir, rel));
-    } catch {
-      missing.push(rel);
-    }
-  }
-  if (missing.length > 0) {
-    throw new Error(`bundle is missing self-installing entries: ${missing.join(", ")} (REQ-TY2-001)`);
-  }
-  const bundlePackage = JSON.parse(await readFile(path.join(bundleDir, "package.json"), "utf8"));
-  if (bundlePackage.type !== "module") {
-    throw new Error("bundle package.json must set type: module so bin/tiny-yeah.js runs as ESM");
-  }
-  if (
-    !manifest.installer ||
-    typeof manifest.installer.bin !== "string" ||
-    typeof manifest.installer.entrypoint !== "string" ||
-    typeof manifest.installer.templatesDir !== "string"
-  ) {
-    throw new Error("manifest.installer block is missing or malformed (REQ-TY2-001)");
-  }
-  if (manifest.airGapComplete) {
-    const standalonePackageDir = manifest.installer.standalonePackageDir;
-    if (typeof standalonePackageDir !== "string") {
-      throw new Error("manifest.installer.standalonePackageDir is required for air-gap-complete bundles");
-    }
-    await access(path.join(bundleDir, standalonePackageDir, "package.json"));
-    await access(path.join(bundleDir, standalonePackageDir, "dist", "index.js"));
-  }
-
-  // Template package.json materialization: the dependency must point at the real tarball,
-  // not the repo-side ${VERSION} placeholder.
-  const templatePackage = JSON.parse(
-    await readFile(path.join(bundleDir, "templates", "opencode", "package.json"), "utf8"),
-  );
-  const depRef = templatePackage?.dependencies?.["tiny-yeah"];
-  if (typeof depRef !== "string" || !depRef.startsWith("file:./vendor/")) {
-    throw new Error(`template package.json tiny-yeah dependency is not a file:./vendor/* ref: ${String(depRef)}`);
-  }
-  if (depRef.includes("${VERSION}")) {
-    throw new Error(`template package.json dependency still carries the \${VERSION} placeholder: ${depRef}`);
-  }
-
-  // Bin hermeticity smoke (REQ-TY2-018). Run from a bare bundle-shaped tmpdir with no node_modules.
-  const bareDir = path.join(tempRoot, "bare-bin-smoke");
-  await mkdir(path.join(bareDir, "bin"), { recursive: true });
-  // Copy ONLY the ESM context + bin into the bare dir — no node_modules.
-  await cp(path.join(bundleDir, "bin", "tiny-yeah.js"), path.join(bareDir, "bin", "tiny-yeah.js"));
-  await writeFile(
-    path.join(bareDir, "package.json"),
-    `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`,
-  );
-  // Stage a manifest.json next to the package root so --version has an authoritative source.
-  await writeFile(
-    path.join(bareDir, "manifest.json"),
-    `${JSON.stringify({ version: manifest.version }, null, 2)}\n`,
-  );
-  const versionResult = await execFileAsync("node", ["bin/tiny-yeah.js", "--version"], {
-    cwd: bareDir,
-    maxBuffer,
-  });
-  const printedVersion = versionResult.stdout.trim();
-  if (printedVersion !== manifest.version) {
-    throw new Error(
-      `bin hermeticity smoke failed: --version printed '${printedVersion}' but manifest version is '${manifest.version}'`,
-    );
-  }
-  return {
-    entriesPresent: requiredEntries.length,
-    binVersion: printedVersion,
-    standalonePackageDir: manifest.installer.standalonePackageDir ?? null,
-  };
-}
-
-async function runStandaloneInstallSmoke(bundleDir, manifest, tempRoot) {
-  const standalonePackageDir = manifest.installer?.standalonePackageDir;
-  if (typeof standalonePackageDir !== "string") {
-    return { standaloneInstall: { available: false }, standaloneDoctor: null };
-  }
-  const targetRoot = path.join(tempRoot, "standalone-install-target");
-  await mkdir(targetRoot, { recursive: true });
-  const installResult = await execFileAsync(
-    process.execPath,
-    [
-      path.join(bundleDir, "bin", "tiny-yeah.js"),
-      "install",
-      "--project",
-      targetRoot,
-      "--bundle",
-      bundleDir,
-      "--yes",
-      "--json",
-    ],
-    {
-      cwd: targetRoot,
-      env: { ...process.env, PATH: "", Path: "" },
-      maxBuffer,
-    },
-  );
-  const parsed = JSON.parse(installResult.stdout.trim());
-  const packageJson = await readJson(
-    path.join(targetRoot, ".opencode", "node_modules", "tiny-yeah", "package.json"),
-  );
-  const doctorResult = await execFileAsync(
-    process.execPath,
-    [
-      path.join(bundleDir, "bin", "tiny-yeah.js"),
-      "doctor",
-      "--project",
-      targetRoot,
-      "--bundle",
-      bundleDir,
-      "--mode",
-      "full",
-      "--json",
-    ],
-    {
-      cwd: targetRoot,
-      env: { ...process.env, PATH: "", Path: "" },
-      maxBuffer,
-    },
-  );
-  return {
-    standaloneInstall: {
-      available: true,
-      kind: parsed.kind,
-      version: parsed.version,
-      packageName: packageJson.name,
-    },
-    standaloneDoctor: JSON.parse(doctorResult.stdout.trim()),
-  };
-}
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "tiny-yeah-offline-verify-"));
-  const report = { bundle: args.bundle, tempRoot: args.keepTemp ? tempRoot : undefined };
+  let args;
+  let phase = "parse";
+  let tarExtractStarted = false;
+  let tempRoot;
   try {
-    await execFileAsync("tar", ["-xzf", args.bundle, "-C", tempRoot], { maxBuffer });
+    args = parseArgs(process.argv.slice(2));
+    phase = "bundle-open";
+    const bundleInfo = await assertReadableBundle(args.bundle);
+    phase = "tmp-root";
+    const tmpRoot = await resolveTmpRoot(args.tmpRoot);
+    phase = "temp-preflight";
+    const tempPreflight = await assertTempCapacity(tmpRoot, bundleInfo.bundleBytes);
+    tempRoot = await mkdtemp(path.join(tmpRoot, "tiny-yeah-offline-verify-"));
+    const report = {
+      bundle: args.bundle,
+      ok: true,
+      preflight: {
+        bundleBytes: bundleInfo.bundleBytes,
+        tempAvailableBytes: tempPreflight.availableBytes,
+        tempRequiredBytes: tempPreflight.requiredBytes,
+        tempRoot: tmpRoot,
+        tmpSpaceProbe: tempPreflight.source,
+      },
+      tempRoot: args.keepTemp ? tempRoot : undefined,
+    };
+
+    phase = "extract";
+    tarExtractStarted = true;
+    try {
+      await execFileAsync("tar", ["-xzf", args.bundle, "-C", tempRoot], { maxBuffer });
+    } catch (error) {
+      if (isNoSpaceError(error)) {
+        throw new VerifyOfflineBundleError(
+          "TEMP_SPACE_EXHAUSTED",
+          `temp root ran out of space during extraction: ${tmpRoot}`,
+          { cause: errorMessage(error), phase, tmpRoot },
+        );
+      }
+      throw new VerifyOfflineBundleError("BUNDLE_EXTRACT_FAILED", `bundle extraction failed: ${args.bundle}`, {
+        bundle: args.bundle,
+        cause: errorMessage(error),
+        phase,
+      });
+    }
+
     const bundleDir = await findBundleDir(tempRoot);
     const manifest = await readJson(path.join(bundleDir, "manifest.json"));
     report.version = manifest.version;
     report.airGapComplete = manifest.airGapComplete;
     report.dependencyStrategy = manifest.dependencyStrategy;
 
-    // SPEC-TINY-YEAH-002 Phase 0: assert the bundle is self-installing (entries present,
-    // manifest.installer block, template materialization, bin hermeticity smoke).
+    phase = "forbidden-entries";
+    await verifyNoForbiddenStandaloneEntries(bundleDir);
+
+    phase = "installer-entries";
     report.installer = await verifyInstallerEntries(bundleDir, manifest, tempRoot);
+    phase = "standalone-smoke";
     const standaloneSmoke = await runStandaloneInstallSmoke(bundleDir, manifest, tempRoot);
     report.standaloneInstall = standaloneSmoke.standaloneInstall;
     report.standaloneDoctor = standaloneSmoke.standaloneDoctor;
 
+    phase = "consumer-prepare";
     const consumer = await prepareConsumer(bundleDir, tempRoot, manifest);
 
+    phase = "consumer-install";
     const installResult = await installConsumerForSmoke(consumer.consumerRoot, manifest, tempRoot);
     report.installMode = installResult.mode;
     report.offlineInstallOk = installResult.offlineInstallOk;
 
     if (!installResult.ok) {
-      console.error(JSON.stringify({ ...report, exitReason: installResult.error }, null, 2));
+      report.cleanup = await cleanupTempRoot(tempRoot, args.keepTemp);
+      console.error(stableStringify({ ...report, exitReason: installResult.error, ok: false }));
       process.exitCode = 1;
       return;
     }
 
-    // Verify the bundled dist/ imports structurally. This is the part that MUST pass regardless
-    // of air-gap status — it proves the project tarball's exports resolve.
+    phase = "exports-smoke";
     report.smoke = await runSmoke(consumer.consumerRoot);
-
-    // Honest exit policy: if airGapComplete is true but offline install failed, exit non-zero
-    // (the bundle claimed completeness it could not deliver). If airGapComplete is false, the
-    // smoke import is the gate — we do NOT fail on the absent offline install (documented gap).
-    console.log(JSON.stringify(report, null, 2));
-  } finally {
-    if (!args.keepTemp) await rm(tempRoot, { recursive: true, force: true });
+    report.cleanup = await cleanupTempRoot(tempRoot, args.keepTemp);
+    console.log(stableStringify(report));
+  } catch (error) {
+    const cleanup = await cleanupTempRoot(tempRoot, args?.keepTemp ?? false);
+    const code = error instanceof VerifyOfflineBundleError ? error.code : "VERIFY_OFFLINE_FAILED";
+    const details = error instanceof VerifyOfflineBundleError ? error.details : {};
+    const errorPhase =
+      details !== null && typeof details === "object" && "phase" in details && typeof details.phase === "string"
+        ? details.phase
+        : phase;
+    const report = {
+      cleanup,
+      code,
+      error: errorMessage(error),
+      ok: false,
+      phase: errorPhase,
+      tarExtractStarted,
+      ...details,
+    };
+    console.error(stableStringify(report));
+    process.exitCode = 1;
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+await main();

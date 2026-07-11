@@ -14,6 +14,8 @@ import {
   INSTALL_CHECK_BUDGET,
   type OutputBudget,
 } from "../../model-contract/budgets.js";
+import { renderBudgetedOutput } from "./budget-output.js";
+import { buildInstallCheckDiagnostic } from "./install-check-diagnostic.js";
 import type { TinyYeahTool } from "./tiny-tool.js";
 import { tinyYeahTool } from "./tiny-tool.js";
 
@@ -69,19 +71,15 @@ function makeLibInstallCheckTool(tools: Record<string, TinyYeahTool>): TinyYeahT
     description: "Parity diagnostic: verifies library and plugin tool surfaces match (REQ-TY-020).",
     budget: { chars: INSTALL_CHECK_BUDGET.chars, items: INSTALL_CHECK_BUDGET.items },
     async run({ root }: { input: unknown; root: string; approvedPreviewId?: string }) {
-      const names = Object.keys(tools)
-        .filter((n) => n !== "tiny_yeah_install_check")
-        .sort();
-      const diagnostic = {
-        schemaVersion: "tiny-yeah.install-check.v1",
-        root,
-        toolCount: names.length,
-        toolNames: names,
-        parity: "ok" as const,
-      };
+      const names = Object.keys(tools).filter((n) => n !== "tiny_yeah_install_check");
+      const diagnostic = buildInstallCheckDiagnostic(root, names);
+      const budgeted = renderBudgetedOutput(diagnostic, {
+        maxOutputChars: INSTALL_CHECK_BUDGET.chars,
+        maxArrayItems: INSTALL_CHECK_BUDGET.items,
+      });
       return {
-        output: JSON.stringify(diagnostic),
-        metadata: { readOnly: true },
+        output: budgeted.output,
+        metadata: { readOnly: true, ...budgeted.metadata },
       };
     },
   };

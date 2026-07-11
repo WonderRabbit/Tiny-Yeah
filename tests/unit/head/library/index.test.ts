@@ -32,6 +32,28 @@ describe("head/library barrel — REQ-TY-019/020 canonical library home", () => 
     expect(surface.tiny_yeah_install_check?.name).toBe("tiny_yeah_install_check");
   });
 
+  it("tiny_yeah_install_check returns a bounded task-focused status with next action", async () => {
+    const surface = createTinyYeahLibrarySurface({ root: process.cwd() });
+    const tool = surface.tiny_yeah_install_check;
+    expect(tool).toBeDefined();
+    if (tool === undefined) return;
+
+    const result = await tool.run({ input: {}, root: process.cwd() });
+    const parsed = JSON.parse(result.output);
+
+    expect(parsed.schemaVersion).toBe("tiny-yeah.install-check.v1");
+    expect(parsed.parity).toBe("ok");
+    expect(parsed.nextAction).toBe(
+      "Run tiny-yeah doctor --json when install health evidence is needed.",
+    );
+    expect(parsed.latestEvidencePath).toBeNull();
+    expect(result.output.length).toBeLessThanOrEqual(tool.budget.chars);
+    expect(result.metadata.truncated).toBe(false);
+    expect(result.metadata.readOnly).toBe(true);
+    expect(result.output).not.toContain("npm ERR!");
+    expect(result.output).not.toContain("PowerShell transcript");
+  });
+
   it("buildTinyYeahTools is the same factory the plugin consumes (parity anchor)", () => {
     const tools = buildTinyYeahTools({ root: process.cwd() });
     const surface = createTinyYeahLibrarySurface({ root: process.cwd() });

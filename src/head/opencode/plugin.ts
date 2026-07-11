@@ -14,9 +14,14 @@
 
 import { type Hooks, type Plugin, type ToolContext, tool } from "@opencode-ai/plugin";
 import { validateModelEmission } from "../../model-contract/boundary.js";
-import { DEFAULT_OUTPUT_BUDGET, ERROR_BUDGET_CHARS } from "../../model-contract/budgets.js";
+import {
+  DEFAULT_OUTPUT_BUDGET,
+  ERROR_BUDGET_CHARS,
+  INSTALL_CHECK_BUDGET,
+} from "../../model-contract/budgets.js";
 import { isModelContractError, ModelContractError } from "../../model-contract/errors.js";
 import { renderBudgetedOutput } from "./budget-output.js";
+import { buildInstallCheckDiagnostic } from "./install-check-diagnostic.js";
 import { buildTinyYeahTools } from "./library-surface.js";
 import type { TinyYeahTool } from "./tiny-tool.js";
 
@@ -48,27 +53,19 @@ function makeInstallCheckTool(tools: TinyYeahPluginToolMap): TinyYeahTool {
     name: "tiny_yeah_install_check",
     description: "Parity diagnostic: verifies library and plugin tool surfaces match (REQ-TY-020).",
     budget: {
-      chars: 40_000,
-      items: 500,
+      chars: INSTALL_CHECK_BUDGET.chars,
+      items: INSTALL_CHECK_BUDGET.items,
     },
     async run({ root }: { input: unknown; root: string; approvedPreviewId?: string }) {
-      const names = Object.keys(tools)
-        .filter((n) => n !== "tiny_yeah_install_check")
-        .sort();
-      const diagnostic = {
-        schemaVersion: "tiny-yeah.install-check.v1",
-        root,
-        toolCount: names.length,
-        toolNames: names,
-        parity: "ok" as const,
-      };
+      const names = Object.keys(tools).filter((n) => n !== "tiny_yeah_install_check");
+      const diagnostic = buildInstallCheckDiagnostic(root, names);
       const budgeted = renderBudgetedOutput(diagnostic, {
-        maxOutputChars: 40_000,
-        maxArrayItems: 500,
+        maxOutputChars: INSTALL_CHECK_BUDGET.chars,
+        maxArrayItems: INSTALL_CHECK_BUDGET.items,
       });
       return {
         output: budgeted.output,
-        metadata: { ...budgeted.metadata } as Record<string, unknown>,
+        metadata: { ...budgeted.metadata },
       };
     },
   };

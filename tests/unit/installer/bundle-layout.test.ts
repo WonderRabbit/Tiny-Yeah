@@ -9,7 +9,8 @@
 
 import { execFile } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
-import { readdir } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -18,6 +19,7 @@ import { describe, expect, it } from "vitest";
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const releaseDir = path.join(repoRoot, "release");
+const verifyScript = path.join(repoRoot, "scripts", "release", "verify-offline-bundle.mjs");
 
 /**
  * Synchronous release-bundle presence check, evaluated once at module load so vitest's
@@ -153,4 +155,57 @@ describe("offline-bundle self-installing layout (REQ-TY2-001)", () => {
     const shEntries = entries.filter((e) => e.endsWith("/install-offline.sh"));
     expect(shEntries).toEqual([]);
   });
+
+  it.skipIf(!HAS_BUNDLE)(
+    "verifier rejects forbidden standalone runtime bulk entries by exact path",
+    async () => {
+      const bundle = await findLatestBundle();
+      if (!bundle) expect.fail("no release tarball found");
+
+      const tmp = await mkdtemp(path.join(os.tmpdir(), "ty2-bundle-layout-forbidden-"));
+      try {
+        const unpacked = path.join(tmp, "unpacked");
+        await mkdir(unpacked, { recursive: true });
+        await execFileAsync("tar", ["-xzf", bundle.archive, "-C", unpacked]);
+
+        const forbiddenPath = `${bundle.topDir}/node_modules/tiny-yeah/src/head/tests/leak.test.ts`;
+        const forbiddenAbs = path.join(unpacked, forbiddenPath);
+        await mkdir(path.dirname(forbiddenAbs), { recursive: true });
+        await writeFile(forbiddenAbs, "export const leak = true;\n");
+
+        const tamperedArchive = path.join(tmp, "tampered.tar.gz");
+        await execFileAsync("tar", ["-czf", tamperedArchive, "-C", unpacked, bundle.topDir]);
+        const verifyTmpRoot = path.join(tmp, "verify-tmp");
+        await mkdir(verifyTmpRoot, { recursive: true });
+        await writeFile(
+          path.join(verifyTmpRoot, ".tiny-yeah-capacity.json"),
+          `${JSON.stringify({ availableBytes: 10 * 1024 * 1024 * 1024 }, null, 2)}\n`,
+        );
+
+        const result = await execFileAsync(process.execPath, [
+          verifyScript,
+          "--bundle",
+          tamperedArchive,
+          "--tmp-root",
+          verifyTmpRoot,
+        ])
+          .then((success) => ({ code: 0, stderr: success.stderr, stdout: success.stdout }))
+          .catch((error: unknown) => {
+            if (error instanceof Error && "stderr" in error && "stdout" in error) {
+              return {
+                code: 1,
+                stderr: String(error.stderr),
+                stdout: String(error.stdout),
+              };
+            }
+            throw error;
+          });
+
+        expect(result.code).toBe(1);
+        expect(`${result.stdout}\n${result.stderr}`).toContain(forbiddenPath);
+      } finally {
+        await rm(tmp, { recursive: true, force: true });
+      }
+    },
+  );
 });
